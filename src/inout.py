@@ -54,12 +54,53 @@ def parse_command_line():
 
     return parameters
 
-def load_input():
-    # TODO: dopo molti ripensamenti, la struttura dati migliore è una matrice
-    # NxN, con "indici" da 0 a N-1. Chiaramente, abbiamo N molto alti e con
-    # "buchi" in mezzo (es. ci sono nodi che compaiono in altri file ma
-    # non compaiono nella rete). Soluzione: creare una mappa su un file temporaneo
-    # che permette di indicizzare i nodi da 1 a TOT, senza avere buchi in mezzo.
-    # QUINDI: cartella "temp" da creare in ogni istanza (e.g. "HINT+HI2012").
-    # DA IMPLEMENTARE IN "process_raw_inputs.py"
-    pass
+def load_input(dataset_name='HINT+HI2012'):
+    """
+    py:function:: load_input()
+
+    Parsing the input from the /in/ folder, assuming that the input has a
+    'standard' format and that it has been already pre-processed with the script.
+
+    :param dataset: String containing the name of the dataset to be loaded.
+
+    :return: a dictionary, containing all the input we need.
+    """
+
+    inputs = {}
+    input_path = '../in/'+dataset_name+'/'
+
+    # First, we extract the vertex labeling, since it's easy and it gives us n;
+    # (n = |V|)
+    file_name = 'vertex_labels.txt'
+    with open(input_path+file_name) as infp:
+        lines = infp.readlines()
+        n = int(lines[0])
+        v_labeling = np.empty(n, dtype=object)
+        for idx, l in enumerate(lines[1:]):
+            # To extract the label is a bit tricky, but nothing to it honestly.
+            label = l.split(" ")[1].split("\n")[0]
+            v_labeling[idx] = (int(idx+1), str(label))
+
+    file_name = 'adjacency_matrix.txt'
+    with open(input_path+file_name) as infp:
+        lines = infp.readlines()
+        m = len(lines)
+        adjacency_matrix = np.zeros((n,n))
+        for l in lines:
+            s = l.split(" ")
+            i = int(s[0])
+            j = int(s[1])
+            adjacency_matrix[i-1,j-1] = 1
+
+    file_name = 'heat.txt'
+    with open(input_path+file_name) as infp:
+        lines = infp.readlines()
+        heat = np.zeros(n, dtype=float)
+        for l in lines:
+            s = l.split(" ")
+            v = int(s[0])
+            heat_value = float(s[1])
+            heat[v-1] = heat_value
+
+    inputs['v_dict'] = 'lol'  # # TODO
+    inputs['edges'] = np.zeros((1))

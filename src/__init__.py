@@ -1,5 +1,7 @@
-def main():
-    print("Hello, World!")
-    print("Altra prova!")
+from inout import *
 
-main()
+def main():
+    load_input()
+
+if __name__ == "__main__":
+    main()

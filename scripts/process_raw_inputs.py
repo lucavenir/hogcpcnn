@@ -59,7 +59,8 @@ def hinthi2012():
             outfp.write(str(vertices_dict[j])+' '+str(vertices_dict[k])+'\n')
         outfp.close()
 
-    # After this analysis, we store the actual number of nodes found until now
+    # After this analysis, we store the actual number of nodes found
+    # (here, n="nodes that are in a connected component")
     n = i-1
 
     # Now, processing the vertices' labels
@@ -82,6 +83,7 @@ def hinthi2012():
 
     # Writing down the label files, ordering them by node.
     with open(input_folder+vertex_labels, 'w') as outfp:
+        outfp.write(str(n)+'\n')
         for item in sorted(vertices_names_dict.items(), key=lambda kv:kv[1]):
             outfp.write(str(item[1])+' '+item[0]+'\n')
 
@@ -107,12 +109,18 @@ def hinthi2012():
     if counter > 0:
         print("WARNING: Nel file heat compaiono " +
         str(counter) +
-        " nodi (con heat>0) che non hanno lati adiacenti a loro, nel grafo")
+        " proteine (con heat>0) i cui nodi sono isolati o non presenti nel grafo")
 
     # Writing down the label files, ordering them by node.
+    j = 0
     with open(input_folder+samples, 'w') as outfp:
-        for item in sorted(heat_dict.items(), key=lambda kv:kv[0]):
-            outfp.write(str(item[0])+' '+str(item[1])+'\n')
+        sorted_vertices = sorted(heat_dict.items(), key=lambda kv:kv[0])
+        for i in range(n):
+            if i+1 in heat_dict:
+                outfp.write(str(i+1)+' '+str(heat_dict[i+1])+'\n')
+            else:
+                outfp.write(str(i+1)+' '+str(0)+'\n')
+
 
 
 def irefindex():
