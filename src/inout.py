@@ -54,4 +54,12 @@ def parse_command_line():
 
     return parameters
 
-def
+def load_input():
+    # TODO: dopo molti ripensamenti, la struttura dati migliore è una matrice
+    # NxN, con "indici" da 0 a N-1. Chiaramente, abbiamo N molto alti e con
+    # "buchi" in mezzo (es. ci sono nodi che compaiono in altri file ma
+    # non compaiono nella rete). Soluzione: creare una mappa su un file temporaneo
+    # che permette di indicizzare i nodi da 1 a TOT, senza avere buchi in mezzo.
+    # QUINDI: cartella "temp" da creare in ogni istanza (e.g. "HINT+HI2012").
+    # DA IMPLEMENTARE IN "process_raw_inputs.py"
+    pass
