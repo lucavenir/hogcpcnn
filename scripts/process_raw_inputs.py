@@ -39,17 +39,18 @@ def hinthi2012():
     except FileExistsError:
         pass
 
+    filter = set()
     # With the edge list, we should be able to construct the graph later.
     vertices_dict = {}  # We want to re-map the vertices
     with open(rawinputs_folder+dataset_name+'/'+edges_file, 'r') as infp:
         lines = infp.readlines()
         outfp = open(input_folder+adjacency_matrix, 'w')
 
-        i = 1
+        i = 0
         for l in lines:
             s = l.split(" ")
-            j = int(s[0])
-            k = int(s[1])
+            j = int(s[0])-1
+            k = int(s[1])-1
             if j not in vertices_dict:
                 vertices_dict[j] = i
                 i += 1
@@ -61,7 +62,7 @@ def hinthi2012():
 
     # After this analysis, we store the actual number of nodes found
     # (here, n="nodes that are in a connected component")
-    n = i-1
+    n = i
 
     # Now, processing the vertices' labels
     counter = 0
@@ -71,7 +72,7 @@ def hinthi2012():
 
         for l in lines:
             s = l.split(" ")
-            vertex_number = int(s[0])
+            vertex_number = int(s[0])-1
             vertex_name = str(s[1].split("\t")[0])
             if vertex_number in vertices_dict:
                 vertices_names_dict[vertex_name] = vertices_dict[vertex_number]
@@ -88,7 +89,7 @@ def hinthi2012():
             outfp.write(str(item[1])+' '+item[0]+'\n')
 
     # Finally, processing the heat file
-    counter = 0
+    counter = 0  # DEBUG: perché ci sono 290 proteine escluse?
     heat_dict = {}
     with open(rawinputs_folder+heat_file, 'r') as infp:
         lines = infp.readlines()
@@ -112,96 +113,24 @@ def hinthi2012():
         " proteine (con heat>0) i cui nodi sono isolati o non presenti nel grafo")
 
     # Writing down the label files, ordering them by node.
-    j = 0
     with open(input_folder+samples, 'w') as outfp:
         sorted_vertices = sorted(heat_dict.items(), key=lambda kv:kv[0])
         for i in range(n):
-            if i+1 in heat_dict:
-                outfp.write(str(i+1)+' '+str(heat_dict[i+1])+'\n')
+            if i in heat_dict:
+                outfp.write(str(i)+' '+str(heat_dict[i])+'\n')
             else:
-                outfp.write(str(i+1)+' '+str(0)+'\n')
+                outfp.write(str(i)+' '+str(0)+'\n')
 
+    # # TODO: implementare preventivamente alcuni filtri con la seguente idea.
+    # in qualche modo una lista di nodi va esclusa dai giochi.
+    # l'idea è di mettere tali nodi in un set ed evitare semplicemente di inserirli
+    # dentro i heat.txt, adjacency_matrix.txt e vertex_labels.txt.
+    # L'implementazione di quest'idea quindi andrebbe fatta SOPRA
+    # filtering = set() è un modo per creare un set vuoto di nodi da escludere
 
+#def irefindex():
 
-def irefindex():
-    # Processing iRedIndex database.
-
-    # Referencing to the global variables:
-    global input_folder
-    global adjacency_matrix
-    global vertex_labels
-
-    # File location
-    dataset_name = 'iRefIndex'
-    rawinputs_folder = '../rawinput/'
-    edges_file = 'irefindex_edge_file.txt'
-    index_file = 'irefindex_index_file.txt'
-    input_folder += dataset_name+'/'
-
-    try:
-        os.mkdir(input_folder)
-    except FileExistsError:
-        pass
-
-    # Processing the vertices' labels first
-    with open(rawinputs_folder+dataset_name+'/'+index_file, 'r') as infp:
-        lines = infp.readlines()
-
-        outfp = open(input_folder+vertex_labels, 'w')
-        for l in lines:
-            # TODO
-            pass
-        outfp.close()
-
-    # Then, processing the edges.
-    with open(rawinputs_folder+dataset_name+'/'+edges_file, 'r') as infp:
-        lines = infp.readlines()
-        outfp = open(input_folder+adjacency_matrix, 'w')
-
-        for l in lines:
-            # TODO:
-            pass
-        outfp.close()
-
-def multinet():
-    # Processing Multinet database.
-
-    # Referencing to the global variables:
-    global input_folder
-    global adjacency_matrix
-    global vertex_labels
-
-    # File location
-    dataset_name = 'Multinet'
-    rawinputs_folder = '../rawinput/'
-    edges_file = 'multinet_edge_file.txt'
-    index_file = 'multinet_index_file.txt'
-    input_folder += dataset_name+'/'
-
-    try:
-        os.mkdir(input_folder)
-    except FileExistsError:
-        pass
-
-    # Processing the vertices' labels first
-    with open(rawinputs_folder+dataset_name+'/'+index_file, 'r') as infp:
-        lines = infp.readlines()
-
-        outfp = open(input_folder+vertex_labels, 'w')
-        for l in lines:
-            # TODO
-            pass
-        outfp.close()
-
-    # Then, processing the edges.
-    with open(rawinputs_folder+dataset_name+'/'+edges_file, 'r') as infp:
-        lines = infp.readlines()
-        outfp = open(input_folder+adjacency_matrix, 'w')
-
-        for l in lines:
-            # TODO:
-            pass
-        outfp.close()
+#def multinet():
 
 if __name__ == "__main__":
     # Here, uncomment the function corresponding to the database you want to decode.
