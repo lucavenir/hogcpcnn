@@ -1,10 +1,11 @@
-from inout import *
-from lib import *
+import inout as io
+import lib as l
 
 def main():
-    inputs = load_input('mysmallgraph')
-    subgraph = [0, 1]
-    print(u_triangle_count(inputs['adj']))
-
+    parameters = io.parse_command_line()
+    inputs = io.load_input(parameters['dataset'])
+    motif_function = getattr(l, parameters['motif'])
+    w = motif_function(inputs['adj'])
+    io.write_to_temp(w, parameters['dataset'], motif_function.__name__)
 if __name__ == "__main__":
     main()
