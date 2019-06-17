@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import sys
+import networkx as nx
 
 # TODO: saranno funzioni davvero utili, queste?
 def conductance(s, adj, m=None, m_instances=None):
@@ -202,15 +203,20 @@ def mappr():
     # E per ottenere il grafo H come descritto nel paper di Vandin et. al.
     pass
 
-def diffusion_matrix(w, heat, alpha, epsilon, delta):
+def diffusion_matrix(w, heat, alpha, epsilon, delta, method='AWPPR'):
     n = len(w)
 
     # Creating F, first.
     f = np.zeros((n,n), dtype=np.float64)
 
-    for u in range(n):
-        p_u_tilde = awppr(w, u, alpha, epsilon)
-        f[:,u] = p_u_tilde
+    if method == 'AWPPR':
+        for u in range(n):
+            p_u_tilde = awppr(w, u, alpha, epsilon)
+            f[:,u] = p_u_tilde
+    elif method == 'HOTNET2':
+        f = (1-alpha) * np.linalg.inv(np.eye(n) - alpha*w)
+    else:
+        raise ValueError("Unrecognized method. Aborting.")
 
     # Then, applying the diffusion process, thus obtaining E
     e = np.dot(f,np.diag(heat))
@@ -220,7 +226,22 @@ def diffusion_matrix(w, heat, alpha, epsilon, delta):
 
     return h
 
-# TODO: Debugging. Anche con i piccoli grafi. E con quelli random.
+def extract_strong_cc(h):
+    H = nx.from_numpy_matrix(h, create_using=nx.DiGraph())
+    ccs = [H.subgraph(c) for c in nx.strongly_connected_components(H)]
+    subgraphs = [set(cc.nodes) for cc in ccs]
+    print(subgraphs)
+    return subgraphs
+
+
 # TODO: Lanciare sul cluster con gli altri dataset.
-# TODO: processo di diffusione non con AWPPR, ma con semplice inversione.
-# TODO: chiedere al professore: W ora ha elementi >1, è pesata così. È un problema?
+"""
+    TODO: chiedere al professore:
+    W ora ha elementi >=1, è pesata così.
+    HOTNET2, invece, usa una "transition matrix" che ha pesi <1.
+    Come interpretare quella matrice di transizione, ora?
+
+    In più, perché ignorare _completamente_ i lati che non partecipano ai motif?
+    Perché semplicemente non lasciare peso unitario ai lati in generale,
+    aumentando invece il peso dei lati che partecipano ai motif?
+"""

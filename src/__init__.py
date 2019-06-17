@@ -32,14 +32,28 @@ def main():
             motif_name=parameters['motif']
         )
 
-    # (3): Start the diffusion algorithm.
+    # (4): Start the diffusion algorithm.
     h = l.diffusion_matrix(
         w=inputs['w'],
         heat=inputs['heat'],
-        alpha=0.5,
-        epsilon=0.001,
-        delta=0.1
+        alpha=0.7,
+        epsilon=0.0001,
+        delta=0.000496,
+        method=parameters['method']
     )
+
+    print(h)
+    # (5): Extracting the connected components in H.
+    strong_cc = l.extract_strong_cc(h)
+
+    # (6): Saving to an output file such strong components.
+    io.write_output(
+        s_cc_list=strong_cc,
+        v_labels=inputs['v_labels'],
+        dataset_name=parameters['dataset'],
+        motif_name=parameters['motif']
+    )
+
 
 if __name__ == "__main__":
     main()

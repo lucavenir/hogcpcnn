@@ -13,7 +13,7 @@ def parse_command_line():
     Command line parsing:
     algorithms here should be queried via command line, only.
     """
-    # initializing 'parameters' with hard-coded defaults.
+    # TODO: maybe useful, maybe not. tbd.
     current_time = time.time()
     timestamp = datetime.datetime.fromtimestamp(current_time).strftime('%Y%m%d_%H:%M:%S')
     default_folder = "run__" + timestamp
@@ -22,7 +22,7 @@ def parse_command_line():
     parameters = {
         'dataset': 'HINT+HI2012',
         'motif': 'u_triangle',
-        'w': False,
+        'method': 'AWPPR',
         'timestamp': timestamp  # for now, this will be ignored
     }
 
@@ -33,7 +33,7 @@ def parse_command_line():
     # Motif searched
     parser.add_argument('-m', type=str, help='Motif type')
     # Computing W only?
-    parser.add_argument('-w', action="store_true", help='Type -w to compute the W matrix only')
+    parser.add_argument('-f', type=str, help='Method to compute f')
 
     args = parser.parse_args()
 
@@ -43,8 +43,8 @@ def parse_command_line():
     if args.m:
         parameters['motif'] = args.m
 
-    if args.w:
-        parameters['w'] = True
+    if args.f:
+        parameters['method'] = args.f
 
     return parameters
 
@@ -151,6 +151,7 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None):
             motif_name = str(file_name[:-4])
             inputs[motif_name] = w[i]
     """
+
     inputs['v_labels'] = v_labeling
     inputs['heat'] = heat
     if motif_name != None:
@@ -176,13 +177,6 @@ def write_to_temp(inputs, w, dataset_name='HINT+HI2012', motif_name='u_triangle'
         os.mkdir(temp_path)
     except FileExistsError:
         pass
-
-    filename = 'unfiltered.txt'
-    with open(temp_path+filename, 'w') as outfp:
-        for i, row in enumerate(w):
-            for j, el in enumerate(row[i+1:]):
-                if el!=0:
-                    outfp.write(str(i)+' '+str(i+j+1)+','+str(el)+'\n')
 
     vertices_dict = {}  # We want to re-map the vertices
     reverse_vertices_dict = {}
@@ -230,6 +224,36 @@ def write_to_temp(inputs, w, dataset_name='HINT+HI2012', motif_name='u_triangle'
             outfp.write(
                 str(vertex_number)+' '+str(heat)+'\n'
             )
+
+def write_output(s_cc_list, v_labels, dataset_name='HINT+HI2012', motif_name='u_triangle'):
+    # For compatibility issues, we're extracting the absolute path of the project.
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    project_path = abs_path[:-3]  # This will work just bc of the name of this dir ('src')
+
+    out_path = project_path+'/out/'+dataset_name+'/'
+    try:
+        os.mkdir(out_path)
+    except FileExistsError:
+        pass
+
+    '''
+    # IDEA: this might be useful later, maybe.
+    out_path += motif_name+'/'
+    try:
+        os.mkdir(out_path)
+    except FileExistsError:
+        pass'''
+
+    filename = motif_name+'.txt'
+    with open(out_path+filename, 'w') as outfp:
+        m = len(s_cc_list)
+        outfp.write("Found "+str(m)+" strongly connected components.\n")
+        for i,set in enumerate(s_cc_list):
+            outfp.write('#'+str(i+1)+': {')
+            for el in set:
+                outfp.write(' '+str(v_labels[el]))
+            outfp.write(' }\n')
+
 
 
 def read_from_temp(dataset_name='HINT+HI2012', motif_name='u_triangle'):

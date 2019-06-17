@@ -80,4 +80,4 @@ def random_graph(size='small', edge_density='low'):
             outfp.write(str(e[0])+' '+str(e[1])+'\n')
 
 if __name__ == "__main__":
-    random_graph('small', 'medium')
+    random_graph('small', 'low')
