@@ -45,7 +45,7 @@ def random_graph(size='small', edge_density='low'):
     input_folder += dataset_name+'/'
 
     # Generating the vertices first
-    vertices = [i+1 for i in range(n)]
+    vertices = [i for i in range(n)]
 
     # Then, the edges
     edges = []

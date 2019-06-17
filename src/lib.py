@@ -1,11 +1,6 @@
 import argparse
-import networkx as nx
 import numpy as np
-
-
-# TODO: la funzione che, data adj e il motif, torna W. (vedi fogli)
-
-
+import sys
 
 # TODO: saranno funzioni davvero utili, queste?
 def conductance(s, adj, m=None, m_instances=None):
@@ -153,13 +148,16 @@ def approx_check(r, d_w, epsilon):
         :return: a vertex that doesn't satisfy the approx., '-1' instead.
     """
 
-    for i in range(len(r)):
-        if(float(r[i])/float(d_w[i]) >= epsilon):
-            return i
+    list_of_vertices = np.arange(len(r))
+    np.random.shuffle(list_of_vertices)
+
+    for v in list_of_vertices:
+        if float(r[v])/float(d_w[v]) >= epsilon:
+            return v
 
     return -1
 
-def awppr(adj, w, u, alpha, epsilon):
+def awppr(w, u, alpha, epsilon):
     """
         py:function:: awppr(adj, w, u, alpha, epsilon)
 
@@ -167,7 +165,6 @@ def awppr(adj, w, u, alpha, epsilon):
         page rank vector of node u, using the weighted matrix w, on the
         graph represented by the adjacency matrix adj.
 
-        :param adj: adjacency matrix representing the original graph.
         :param w: weighted adjacency matrix obtained with the motif analysis.
         :param u: vertex on which the AWPPR is computed.
         :param alpha: teleportation/random step parameter (see papers).
@@ -177,26 +174,53 @@ def awppr(adj, w, u, alpha, epsilon):
     """
 
     n = len(w)
+
+    # Initializing
     p_tilde = np.zeros(n, dtype=np.float64)
     r = np.zeros(n, dtype=np.float64)
-    r[0] = 1
-    d_w = np.sum(w, axis=1)
+    r[u] = 1
+
+    # np.set_printoptions(threshold=sys.maxsize)
+    d_w = np.sum(w, axis=0)
 
     v = approx_check(r, d_w, epsilon)
     while (v != -1):  # repeat until the approx. condition is met
         # push operation
         ro = r[v] - (epsilon/2) * d_w[v]
-        p_tilde = p_tilde + (1-alpha)*ro
+        p_tilde[v] += (1-alpha)*ro
         r[v] = (epsilon/2) * d_w[v]
         # r update
-        r += (float(adj[v,:])/float(d_w)) * alpha * ro
+        r += (w[v,:].astype(np.float64) / d_w.astype(np.float64)) * alpha * ro
         # should we iterate again?
         v = approx_check(r, d_w, epsilon)
 
     return p_tilde
 
 def mappr():
-    # TODO: ok MAPPR, ma c'è da capire bene come si usano le informazioni in heat.txt
-    # per la diffusione del calore... in MAPPR si effettua un clustering in base ad
-    # dato seed; ripetere per ogni possibile seed può avere un senso, ma come si
-    # collega quest'informazione con il calore iniziale? (i.e. campioni biologici)
+    # NOTE: probabilmente non è neanche necessario. Sfrutteremo AWPPR per
+    # ri-creare quello che fa HotNet2. Ci interessa infatti ottenere la matrice
+    # E per ottenere il grafo H come descritto nel paper di Vandin et. al.
+    pass
+
+def diffusion_matrix(w, heat, alpha, epsilon, delta):
+    n = len(w)
+
+    # Creating F, first.
+    f = np.zeros((n,n), dtype=np.float64)
+
+    for u in range(n):
+        p_u_tilde = awppr(w, u, alpha, epsilon)
+        f[:,u] = p_u_tilde
+
+    # Then, applying the diffusion process, thus obtaining E
+    e = np.dot(f,np.diag(heat))
+    # Now, obtaining the H matrix, via pruning.
+    h = np.zeros((n,n), dtype=np.float64)
+    h[e>=delta] = 1
+
+    return h
+
+# TODO: Debugging. Anche con i piccoli grafi. E con quelli random.
+# TODO: Lanciare sul cluster con gli altri dataset.
+# TODO: processo di diffusione non con AWPPR, ma con semplice inversione.
+# TODO: chiedere al professore: W ora ha elementi >1, è pesata così. È un problema?
