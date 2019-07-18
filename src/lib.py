@@ -172,10 +172,6 @@ def filter_disconnected_components(motif_mat, inputs):
     k = len(motif_mat_filtered)
     print("Filtered out "+str(n-k)+" disconnected nodes")
 
-    for i, row in enumerate(motif_mat_filtered):
-        if sum(row)==0:
-            print(i)
-
     inputs['v_labels'] = np.delete(
         inputs['v_labels'],
         disconnected_vertices

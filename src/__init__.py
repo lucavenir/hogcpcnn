@@ -28,12 +28,6 @@ def main():
                 motif_matrix,
                 inputs
             )
-            print("FILTERED:")
-            print(len(motif_matrix_filtered))
-            print(motif_matrix_filtered)
-            print("INPUTS:")
-            print(len(input['v_labels']))
-            print(len(input['heat']))
 
         w = l.transition_matrix(
             motif_matrix_filtered,
