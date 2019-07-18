@@ -1,4 +1,0 @@
-Found 3 strongly connected components.
-#1: { FAM46A UBE2D4 LOL }
-#2: { RNF14 }
-#3: { UBE2E1 HEHEHEHE }

@@ -93,28 +93,27 @@ def u_triangle(adj):
 
         :return: numpy NxN matrix, i.e. the new adj matrix representing the undirected triangle count
     '''
-
-    n = len(adj)
+    a = np.copy(adj)
+    n = len(a)
     w_mat = np.zeros((n,n), dtype=np.uint16)
-    # triangles = set()
 
     sorted_degrees = sorted(
-        [(i,sum(row)) for i,row in enumerate(adj)],
+        [(i,sum(row)) for i,row in enumerate(a)],
         reverse=True,
         key=lambda t:t[1]
     )
 
-    for i, row in enumerate(adj[:-2,:]):
+    for i, row in enumerate(a[:-2,:]):
         # Iterating through all the rows, i.e. every node once exactly
         v = sorted_degrees[i][0]  # Iterating from the highest degree to lowest
         colouring = [  # Colouring every neighbour of v
             True if w!=v and elem!=0 else False
-            for w, elem in enumerate(adj[v,:])
+            for w, elem in enumerate(a[v,:])
         ]
         for j, el in enumerate(row[v+1:]):  # for each coloured neighbour u
             if el!=0:  # the "coloured" condition is here
                 u = v+j+1  # We state who "u" is
-                for w, elem in enumerate(adj[u,:]):
+                for w, elem in enumerate(a[u,:]):
                     if elem!=0 and colouring[w]:
                         # If u and v share a neighbour, this is a triangle.
                         w_mat[u,v] += 1
@@ -128,10 +127,72 @@ def u_triangle(adj):
                 # Removing the colour from u
                 colouring[u] = False
         # Erasing v from the graph
-        adj[v,:] = 0
-        adj[:,v] = 0
+        a[v,:] = 0
+        a[:,v] = 0
 
     return w_mat
+
+def no(adj):
+    return adj
+
+def filter_disconnected_components(motif_mat, inputs):
+    '''
+        py:funcion:: filter_disconnected_components(motif_mat, inputs)
+
+        This function filters out disconnected components from the graph.
+        Disconnected components may appear in the hard version of the problem,
+        when some edges don't occur in motifs, and therefore their weight is 0.
+        This function returns a new filtered matrix and changes the input
+        values, directly.
+
+
+        :param adj: numpy NxN matrix, i.e. the motif matrix
+
+        :return: numpy NxN matrix, i.e. the filtered motif matrix and other re-mapped inputs
+    '''
+
+    n = len(motif_mat)
+    disconnected_vertices = [
+        i if sum(motif_mat[i,:])==0 else 0
+        for i in range(n)
+    ]
+    disconnected_vertices = [
+        el for el in disconnected_vertices
+        if el>0
+    ]
+    motif_mat_filtered = np.delete(
+        np.delete(
+            motif_mat,
+            disconnected_vertices,
+            0
+        ),
+        disconnected_vertices,
+        1
+    )
+    k = len(motif_mat_filtered)
+    print("Filtered out "+str(n - k)+" disconnected nodes")
+
+    inputs['v_labels'] = np.delete(
+        inputs['v_labels'],
+        disconnected_vertices
+    )
+    inputs['heat'] = np.delete(
+        inputs['heat'],
+        disconnected_vertices
+    )
+
+    return motif_mat_filtered
+
+def transition_matrix(motif_mat, soft=False, adj=None):
+    n = len(motif_mat)
+
+    w = np.zeros((n,n), dtype=np.float64)
+    counting_motifs = motif_mat+adj if soft else motif_mat
+
+    for i in range(n):
+        w[i,:] = counting_motifs[i,:]/sum(counting_motifs[i,:])
+
+    return w
 
 def approx_check(r, d_w, epsilon):
     """
@@ -198,7 +259,7 @@ def awppr(w, u, alpha, epsilon):
     return p_tilde
 
 def mappr():
-    # NOTE: probabilmente non è neanche necessario. Sfrutteremo AWPPR per
+    # NOTE: probabilmente non è necessario. Sfrutteremo AWPPR per
     # ri-creare quello che fa HotNet2. Ci interessa infatti ottenere la matrice
     # E per ottenere il grafo H come descritto nel paper di Vandin et. al.
     pass
@@ -209,14 +270,14 @@ def diffusion_matrix(w, heat, alpha, epsilon, delta, method='AWPPR'):
     # Creating F, first.
     f = np.zeros((n,n), dtype=np.float64)
 
-    if method == 'AWPPR':
+    if method == 'AWPPR':  # approximate PPR method
         for u in range(n):
             p_u_tilde = awppr(w, u, alpha, epsilon)
             f[:,u] = p_u_tilde
-    elif method == 'HOTNET2':
+    elif method == 'HOTNET2':  # inverting the matrix directly
         f = (1-alpha) * np.linalg.inv(np.eye(n) - alpha*w)
     else:
-        raise ValueError("Unrecognized method. Aborting.")
+        raise ValueError(method + " is an unrecognized method. Aborting.")
 
     # Then, applying the diffusion process, thus obtaining E
     e = np.dot(f,np.diag(heat))
@@ -229,12 +290,14 @@ def diffusion_matrix(w, heat, alpha, epsilon, delta, method='AWPPR'):
 def extract_strong_cc(h):
     H = nx.from_numpy_matrix(h, create_using=nx.DiGraph())
     ccs = [H.subgraph(c) for c in nx.strongly_connected_components(H)]
-    subgraphs = [set(cc.nodes) for cc in ccs]
+    subgraphs = [
+        set(cc.nodes)
+        for cc in ccs
+        if len(set(cc.nodes))>1
+    ]
     print(subgraphs)
     return subgraphs
 
-
-# TODO: Lanciare sul cluster con gli altri dataset.
 """
     TODO: chiedere al professore:
     W ora ha elementi >=1, è pesata così.

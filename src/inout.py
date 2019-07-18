@@ -22,7 +22,8 @@ def parse_command_line():
     parameters = {
         'dataset': 'HINT+HI2012',
         'motif': 'u_triangle',
-        'method': 'AWPPR',
+        'method': 'HOTNET2',
+        'soft': False,
         'timestamp': timestamp  # for now, this will be ignored
     }
 
@@ -32,9 +33,10 @@ def parse_command_line():
     parser.add_argument('-d', type=str, help='Name of the dataset used')
     # Motif searched
     parser.add_argument('-m', type=str, help='Motif type')
-    # Computing W only?
+    # Diffusion process algorithm selection
     parser.add_argument('-f', type=str, help='Method to compute f')
-
+    # Soft version of the problem?
+    parser.add_argument('-s', action='store_true', help='Type -s to enable the soft version')
     args = parser.parse_args()
 
     if args.d:
@@ -46,9 +48,12 @@ def parse_command_line():
     if args.f:
         parameters['method'] = args.f
 
+    if args.s:
+        parameters['soft'] = True
+
     return parameters
 
-def load_input(dataset_name='HINT+HI2012', motif_name=None):
+def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False):
     """
     py:function:: load_input(dataset_name='HINT+HI2012')
 
@@ -65,8 +70,9 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None):
     abs_path = os.path.dirname(os.path.abspath(__file__))
     project_path = abs_path[:-3]  # This will work just bc of the name of this dir
     input_path = project_path+'in/'+dataset_name+'/'
+
     if motif_name != None:
-        input_path += 'temp/'+motif_name+'/'
+        motif_path = input_path + 'temp/'+motif_name+'/'
 
     # First, we extract the vertex labeling, since it's easy and it gives us n;
     # (n = |V|)
@@ -82,26 +88,26 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None):
             name = str(s[1].split("\n")[0])  # We want to get rid of the '\n'
             v_labeling[idx] = name
 
-    if motif_name == None:
-        file_name = 'adjacency_matrix.txt'
-        with open(input_path+file_name) as infp:
+    file_name = 'adjacency_matrix.txt'
+    with open(input_path+file_name) as infp:
+        lines = infp.readlines()
+        adjacency_matrix = np.zeros((k,k), dtype=np.uint8)
+        for l in lines:
+            s = l.split(" ")
+            i = int(s[0])
+            j = int(s[1])
+            adjacency_matrix[i,j] = 1
+            adjacency_matrix[j,i] = 1  # assuming undirected graphs
+
+    if motif_name!=None:
+        file_name = 'w_s.txt' if soft else 'w.txt'
+        with open(motif_path+file_name) as infp:
             lines = infp.readlines()
-            adjacency_matrix = np.zeros((k,k), dtype=np.uint8)
-            for l in lines:
-                s = l.split(" ")
-                i = int(s[0])
-                j = int(s[1])
-                adjacency_matrix[i,j] = 1
-                adjacency_matrix[j,i] = 1  # assuming undirected graphs
-    else:
-        file_name = 'w.txt'
-        with open(input_path+file_name) as infp:
-            lines = infp.readlines()
-            w = np.zeros((k,k), dtype=np.uint16)
+            w = np.zeros((k,k), dtype=np.float64)
             for l in lines:
                 s = l.split(",")
                 edge = s[0]
-                weight = int(s[1])
+                weight = float(s[1])
                 s = edge.split(" ")
                 i = int(s[0])
                 j = int(s[1])
@@ -154,14 +160,13 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None):
 
     inputs['v_labels'] = v_labeling
     inputs['heat'] = heat
+    inputs['adj'] = adjacency_matrix
     if motif_name != None:
         inputs['w'] = w
-    else:
-        inputs['adj'] = adjacency_matrix
 
     return inputs
 
-def write_to_temp(inputs, w, dataset_name='HINT+HI2012', motif_name='u_triangle'):
+def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='u_triangle', soft=False):
     # For compatibility issues, we're extracting the absolute path of the project.
     abs_path = os.path.dirname(os.path.abspath(__file__))
     project_path = abs_path[:-3]  # This will work just bc of the name of this dir
@@ -178,31 +183,16 @@ def write_to_temp(inputs, w, dataset_name='HINT+HI2012', motif_name='u_triangle'
     except FileExistsError:
         pass
 
-    vertices_dict = {}  # We want to re-map the vertices
-    reverse_vertices_dict = {}
-    filename = 'w.txt'
+    n = len(w)
+    filename = 'w_s.txt' if soft else 'w.txt'
     with open(temp_path+filename, 'w') as outfp:
-        k = 0
         for i, row in enumerate(w):
-            for j, el in enumerate(row[i+1:]):
+            for j, el in enumerate(row):
                 if el!=0:
-                    if i not in vertices_dict:
-                        vertices_dict[i] = k
-                        reverse_vertices_dict[k] = i
-                        k += 1
-                    if i+j+1 not in vertices_dict:
-                        vertices_dict[i+j+1] = k
-                        reverse_vertices_dict[k] = i+j+1
-                        k += 1
                     outfp.write(
-                        str(vertices_dict[i])+' '+str(vertices_dict[i+j+1])+','
+                        str(i)+' '+str(j)+','
                     )
                     outfp.write(str(el)+'\n')
-
-    # Storing the actual number of nodes found
-    # (here, n="nodes that are in a connected component")
-    n = k
-    print("Filtered out "+str(len(w) - n)+" disconnected nodes")
 
     # Now, writing down the vertices' labels
     filename = 'vertex_labels.txt'
@@ -210,7 +200,7 @@ def write_to_temp(inputs, w, dataset_name='HINT+HI2012', motif_name='u_triangle'
         outfp.write(str(n)+'\n')
         for i in range(n):
             vertex_number = i
-            vertex_name = inputs['v_labels'][reverse_vertices_dict[i]]
+            vertex_name = inputs['v_labels'][i]
             outfp.write(
                 str(vertex_number)+' '+str(vertex_name)+'\n'
             )
@@ -220,12 +210,12 @@ def write_to_temp(inputs, w, dataset_name='HINT+HI2012', motif_name='u_triangle'
     with open(temp_path+filename, 'w') as outfp:
         for i in range(n):
             vertex_number = i
-            heat = inputs['heat'][reverse_vertices_dict[i]]
+            heat = inputs['heat'][i]
             outfp.write(
                 str(vertex_number)+' '+str(heat)+'\n'
             )
 
-def write_output(s_cc_list, v_labels, dataset_name='HINT+HI2012', motif_name='u_triangle'):
+def write_output(s_cc_list, v_labels, dataset_name='HINT+HI2012', motif_name='u_triangle', soft=False):
     # For compatibility issues, we're extracting the absolute path of the project.
     abs_path = os.path.dirname(os.path.abspath(__file__))
     project_path = abs_path[:-3]  # This will work just bc of the name of this dir ('src')
@@ -244,6 +234,8 @@ def write_output(s_cc_list, v_labels, dataset_name='HINT+HI2012', motif_name='u_
     except FileExistsError:
         pass'''
 
+    if soft:
+        motif_name += '_s'
     filename = motif_name+'.txt'
     with open(out_path+filename, 'w') as outfp:
         m = len(s_cc_list)
