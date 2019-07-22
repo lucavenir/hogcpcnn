@@ -72,16 +72,22 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False):
     input_path = project_path+'in/'+dataset_name+'/'
 
     if motif_name != None:
-        motif_path = input_path + 'temp/'+motif_name+'/'
+        motif_path = input_path + 'temp/'+motif_name
+        if soft:
+            motif_path += '_s'
+        motif_path += '/'
+
 
     # First, we extract the vertex labeling, since it's easy and it gives us n;
     # (n = |V|)
     file_name = 'vertex_labels.txt'
-    with open(input_path+file_name) as infp:
+    file_path = input_path if motif_name==None else motif_path
+    with open(file_path+file_name) as infp:
         lines = infp.readlines()
-        k = int(lines[0])
+        n = int(lines[0])
+        k = int(lines[1])
         v_labeling = np.empty(k, dtype=object)
-        for l in lines[1:]:
+        for l in lines[2:]:
             s = l.split(" ")
             idx = int(s[0])
             # To extract the label is a bit tricky, but nothing to it honestly.
@@ -91,7 +97,7 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False):
     file_name = 'adjacency_matrix.txt'
     with open(input_path+file_name) as infp:
         lines = infp.readlines()
-        adjacency_matrix = np.zeros((k,k), dtype=np.uint8)
+        adjacency_matrix = np.zeros((n,n), dtype=np.uint8)
         for l in lines:
             s = l.split(" ")
             i = int(s[0])
@@ -100,7 +106,7 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False):
             adjacency_matrix[j,i] = 1  # assuming undirected graphs
 
     if motif_name!=None:
-        file_name = 'w_s.txt' if soft else 'w.txt'
+        file_name = 'w.txt'
         with open(motif_path+file_name) as infp:
             lines = infp.readlines()
             w = np.zeros((k,k), dtype=np.float64)
@@ -115,7 +121,8 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False):
                 w[j,i] = weight  # assuming undirected graphs
 
     file_name = 'heat.txt'
-    with open(input_path+file_name) as infp:
+    file_path = input_path if motif_name==None else motif_path
+    with open(file_path+file_name) as infp:
         lines = infp.readlines()
         heat = np.zeros(k, dtype=np.float64)
         for l in lines:
@@ -123,40 +130,6 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False):
             v = int(s[0])
             heat_value = float(s[1])
             heat[v] = heat_value
-
-
-    """
-    # IDEA: questo codice metteva in conto la possibilità di caricare in memoria
-    più matrici con diversi motif, in futuro. Non credo sia utile ma intanto lascio qui.
-
-    temp_path = input_path+'temp/'
-    if os.path.exists(temp_path):
-        files = [
-            f
-            for f in os.listdir(temp_path)
-            if os.path.isfile(os.path.join(temp_path, f))
-        ]
-        w = [
-            np.zeros((n,n), dtype=np.uint16)
-            for i in range(len(files))
-        ]
-
-        for i, file_name in enumerate(files):
-            temp_path = input_path+'temp/'
-            with open(temp_path+file_name) as infp:
-                lines = infp.readlines()
-                for l in lines:
-                    s = l.split(",")
-                    weight = int(s[1])
-                    s = s[0].split(" ")
-                    v = int(s[0])
-                    u = int(s[1])
-                    w[i][v,u] = weight
-                    w[i][u,v] = weight
-
-            motif_name = str(file_name[:-4])
-            inputs[motif_name] = w[i]
-    """
 
     inputs['v_labels'] = v_labeling
     inputs['heat'] = heat
@@ -177,14 +150,18 @@ def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='u
     except FileExistsError:
         pass
 
-    temp_path += motif_name+'/'
+    temp_path += motif_name
+    if soft:
+        temp_path += '_s'
+    temp_path += '/'
     try:
         os.mkdir(temp_path)
     except FileExistsError:
         pass
 
-    n = len(w)
-    filename = 'w_s.txt' if soft else 'w.txt'
+    k = len(w)
+    n = len(inputs['adj'])
+    filename = 'w.txt'
     with open(temp_path+filename, 'w') as outfp:
         for i, row in enumerate(w):
             for j, el in enumerate(row):
@@ -198,7 +175,8 @@ def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='u
     filename = 'vertex_labels.txt'
     with open(temp_path+filename, 'w') as outfp:
         outfp.write(str(n)+'\n')
-        for i in range(n):
+        outfp.write(str(k)+'\n')
+        for i in range(k):
             vertex_number = i
             vertex_name = inputs['v_labels'][i]
             outfp.write(
@@ -208,7 +186,7 @@ def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='u
     # Finally, writing down the new heat file
     filename = 'heat.txt'
     with open(temp_path+filename, 'w') as outfp:
-        for i in range(n):
+        for i in range(k):
             vertex_number = i
             heat = inputs['heat'][i]
             outfp.write(
@@ -241,8 +219,12 @@ def write_output(s_cc_list, v_labels, dataset_name='HINT+HI2012', motif_name='u_
         m = len(s_cc_list)
         outfp.write("Found "+str(m)+" strongly connected components.\n")
         for i,set in enumerate(s_cc_list):
-            outfp.write('#'+str(i+1)+': {')
-            for el in set:
+            outfp.write('#'+str(i+1)+' (len: '+ str(len(set)) +'): {')
+            set_list = sorted(
+                list(set),
+                key=lambda el:v_labels[el]
+            )
+            for el in set_list:
                 outfp.write(' '+str(v_labels[el]))
             outfp.write(' }\n')
 
@@ -289,28 +271,3 @@ def read_from_temp(dataset_name='HINT+HI2012', motif_name='u_triangle'):
             w[j,i] = weight  # assuming undirected graphs
 
     return w
-
-def write_outputs(subgraphs=None):
-    """
-        py::funcion write_outputs()
-        We expect the outputs of our procedures to be... subgraphs!
-        Since we already have the graph saved in our /in/ folders,
-        we just want to save every subgraph as a list of vertices.
-
-        For efficiency purposes, we can store those vertices inside tuples.
-
-        :param subgraphs: List of tuples: each tuple are the vertices that induce a subgraph
-    """
-
-    output_path = '../out/'+dataset_name+'/'
-    try:
-        os.mkdir(output_path)
-    except FileExistsError:
-        pass
-
-    filename = 'out.txt'
-    with open(output_path+filename) as outfp:
-        # TODO: vorremmo scrivere I NOMI delle proteine, non i loro numeri.
-        for s in subgraphs:
-            outfp.write(s)
-            outfp.write('\n')

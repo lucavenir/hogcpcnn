@@ -258,12 +258,6 @@ def awppr(w, u, alpha, epsilon):
 
     return p_tilde
 
-def mappr():
-    # NOTE: probabilmente non è necessario. Sfrutteremo AWPPR per
-    # ri-creare quello che fa HotNet2. Ci interessa infatti ottenere la matrice
-    # E per ottenere il grafo H come descritto nel paper di Vandin et. al.
-    pass
-
 def diffusion_matrix(w, heat, alpha, epsilon, delta, method='AWPPR'):
     n = len(w)
 
@@ -295,7 +289,7 @@ def extract_strong_cc(h):
         for cc in ccs
         if len(set(cc.nodes))>1
     ]
-    print(subgraphs)
+
     return subgraphs
 
 """

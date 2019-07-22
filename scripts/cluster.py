@@ -26,7 +26,7 @@ proteinsin = "../../data/hint+hi2012_index_file.txt"
 genesin = "../../data/hint+hi2012_edge_file.txt"
 filterin = "../../data/mutated_expressed_genes.txt"
 databases = ['HINT+HI2012']
-motifs = ['u_triangle']  # Which motif should we search inside the graph?
+motifs = ['no']  # Which motif should we search inside the graph?
 soft = [False]  # Which version should we run?
 # time_out = 604800*4  # for now, for each execution, we're willing to wait 28 days per run, maximum
 

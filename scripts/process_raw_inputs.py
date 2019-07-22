@@ -86,6 +86,7 @@ def hinthi2012():
     # Writing down the label files, ordering them by node.
     with open(input_folder+vertex_labels, 'w') as outfp:
         outfp.write(str(n)+'\n')
+        outfp.write(str(n)+'\n')  # Writing it down twice IS necessary.
         for item in sorted(vertices_names_dict.items(), key=lambda kv:kv[1]):
             outfp.write(str(item[1])+' '+item[0]+'\n')
 
