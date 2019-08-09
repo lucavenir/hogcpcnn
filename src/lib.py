@@ -138,34 +138,31 @@ def counting_quadrangles(a, vertices_labels):
     '''
     # TODO: descrizione
     '''
-    quadrangle_list = set()  # TODO: scelta implementativa non ottimale per ora
+    quadrangles_list = set()
 
+    # TODO: commentare il codice
     n = len(a)
 
     for i, row in enumerate(a):
         v = row[0]
-        bipartition = [
-            []
-            for i in range(n)
-        ]
-        for j, el in enumerate(row[1:]):  # For each u adj to v
+        bipartition = [set() for i in range(n)]
+        for j, el1 in enumerate(row[1:]):  # For each u adj to v
             u = j
-            for k, el in enumerate(a[vertices_labels[u],1:]):  # For each w adj to u,
-                w = k
-                # such that w!=v
-                if w!=v:
-                    bipartition[w] += [w]
+            if el1!=0:  # if u is neighbour of v (i.e. adj to v)
+                for k, el2 in enumerate(a[vertices_labels[u],1:]):  # For each w adj to u
+                    w = k
+                    # if w is neighbour of u (i.e. adj) and such that w!=v
+                    if el2!=0 and w!=v:
+                        bipartition[w].add(u)
 
-        for b in bipartition:
+        for w, b in enumerate(bipartition):
             if len(b)>1:
-                quadrangle_list.add(v,w,frozenset(b))
+                quadrangles_list.add((v,w,frozenset(b)))
 
         # Erasing v from the graph
         a[i,1:] = 0  # The the '1:' is added to ignore the labels (first col)
         a[:,i+1] = 0  # Again, we don't want to change the labeling.
 
-    print(quadrangle_list)
-    input()
     return quadrangle_list
 
 def counting_triangles(a, vertices_labels):
@@ -187,7 +184,7 @@ def counting_triangles(a, vertices_labels):
             if el!=0 and u!=v:  # the "coloured" condition is here
                 for w, elem in enumerate(a[vertices_labels[u],1:]):
                     if elem!=0 and colouring[w]:
-                        triangle_list.add((u,v,w))
+                        triangles_list.add((u,v,w))
 
                 # Removing the colour from u
                 colouring[u] = False
@@ -317,13 +314,31 @@ def quadrangle(adj):
     # TODO: descrizione
     '''
 
+    # TODO: commentare il codice
     n = len(adj)
     w_mat = np.zeros((n,n), dtype=np.uint16)
 
     a, vertices_labels = sort_by_degree(adj)
-    triangle_list = counting_quadrangles(a, vertices_labels)
+    quadrangle_list = counting_quadrangles(a, vertices_labels)
 
+    for q in quadrangle_list:
+        v = q[0]
+        w = q[1]
+        u_set = list(q[2])
+        for i, u_i in enumerate(u_set):
+            for u_j in u_set[i+1:]:
+                w_mat[v,u_i] += 1
+                w_mat[v,u_j] += 1
+                w_mat[u_j,w] += 1
+                w_mat[u_i,w] += 1
 
+                # Symmetry:
+                w_mat[u_i,v] += 1
+                w_mat[u_j,v] += 1
+                w_mat[w,u_j] += 1
+                w_mat[w,u_i] += 1
+
+    return w_mat
 
 def no(adj):
     return adj
