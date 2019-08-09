@@ -21,7 +21,7 @@ def parse_command_line():
     # Initializing the dictionary containing the parameters with default values
     parameters = {
         'dataset': 'HINT+HI2012',
-        'motif': 'u_triangle',
+        'motif': 'triangle',
         'method': 'HOTNET2',
         'soft': False,
         'timestamp': timestamp  # for now, this will be ignored
@@ -139,7 +139,7 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False):
 
     return inputs
 
-def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='u_triangle', soft=False):
+def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='triangle', soft=False):
     # For compatibility issues, we're extracting the absolute path of the project.
     abs_path = os.path.dirname(os.path.abspath(__file__))
     project_path = abs_path[:-3]  # This will work just bc of the name of this dir
@@ -193,7 +193,7 @@ def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='u
                 str(vertex_number)+' '+str(heat)+'\n'
             )
 
-def write_output(s_cc_list, v_labels, dataset_name='HINT+HI2012', motif_name='u_triangle', soft=False):
+def write_output(s_cc_list, v_labels, dataset_name='HINT+HI2012', motif_name='triangle', soft=False):
     # For compatibility issues, we're extracting the absolute path of the project.
     abs_path = os.path.dirname(os.path.abspath(__file__))
     project_path = abs_path[:-3]  # This will work just bc of the name of this dir ('src')
@@ -230,9 +230,9 @@ def write_output(s_cc_list, v_labels, dataset_name='HINT+HI2012', motif_name='u_
 
 
 
-def read_from_temp(dataset_name='HINT+HI2012', motif_name='u_triangle'):
+def read_from_temp(dataset_name='HINT+HI2012', motif_name='triangle'):
     """
-    py:function:: read_from_temp(dataset_name='HINT+HI2012', motif='u_triangle')
+    py:function:: read_from_temp(dataset_name='HINT+HI2012', motif='triangle')
 
     Parsing the input from the /in/dataset_name/temp/ folder, assuming that we
     can find the w matrix stored, there. The format should be linked to whatever

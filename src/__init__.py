@@ -53,9 +53,9 @@ def main():
     h = l.diffusion_matrix(
         w=inputs['w'],
         heat=inputs['heat'],
-        alpha=0.7,
-        epsilon=0.0001,
-        delta=0.000496,
+        alpha=0.5,
+        epsilon=0.001,
+        delta=0.05,
         method=parameters['method']
     )
 
