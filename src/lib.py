@@ -163,7 +163,7 @@ def counting_quadrangles(a, vertices_labels):
         a[i,1:] = 0  # The the '1:' is added to ignore the labels (first col)
         a[:,i+1] = 0  # Again, we don't want to change the labeling.
 
-    return quadrangle_list
+    return quadrangles_list
 
 def counting_triangles(a, vertices_labels):
     '''
@@ -193,7 +193,7 @@ def counting_triangles(a, vertices_labels):
         a[i,1:] = 0  # The the '1:' is added to ignore the labels (first col)
         a[:,i+1] = 0  # Again, we don't want to change the labeling.
 
-    return triangle_list
+    return triangles_list
 
 def tailed_triangle(adj):
     '''
@@ -220,7 +220,7 @@ def tailed_triangle(adj):
 
     a, vertices_labels = sort_by_degree(adj)
 
-    triangle_list = counting_triangles(a, vertices_labels)
+    triangles_list = counting_triangles(a, vertices_labels)
 
     # Now, for each triangle found, we want to investigate if they've got a tail
     # A tail could be found in any of the three vertices of the triangle.
@@ -292,7 +292,7 @@ def triangle(adj):
     w_mat = np.zeros((n,n), dtype=np.uint16)
 
     a, vertices_labels = sort_by_degree(adj)
-    triangle_list = counting_triangles(a, vertices_labels)
+    triangles_list = counting_triangles(a, vertices_labels)
 
     # Now, for each triangle found, we transition this into our motif_count matrix.
     for triangle in triangles_list:
@@ -309,6 +309,95 @@ def triangle(adj):
 
     return w_mat
 
+def tailed_quadrangle(adj):
+    '''
+    # TODO: descrizione
+    '''
+
+    # TODO: commentare il codice
+    n = len(adj)
+    w_mat = np.zeros((n,n), dtype=np.uint16)
+
+    a, vertices_labels = sort_by_degree(adj)
+    quadrangles_list = counting_quadrangles(a, vertices_labels)
+
+    # Now, for each quadrangle found, we want to investigate if they've got
+    # a tail; a tail could be found in any of the four vertices of the quadrangle
+    for q in quadrangles_list:
+        v = q[0]
+        w = q[1]
+        u_set = list(q[2])
+        for i, u_i in enumerate(u_set):
+            for u_j in u_set[i+1:]:
+                # Here, we have our quadrangle:
+                # (v,w,u_i,u_j)
+
+                # Now, investigating v's neighbours
+                for j, el in enumerate(adj[v,:]):
+                    if j!=u_i and j!=u_j and j!=w and el==1:
+                        # tailed quadrangle found.
+                        w_mat[v,u_i] += 1
+                        w_mat[v,u_j] += 1
+                        w_mat[u_j,w] += 1
+                        w_mat[u_i,w] += 1
+                        w_mat[v,j] += 1
+                        # Because of undirected graphs symmetry
+                        w_mat[v,u_i] += 1
+                        w_mat[v,u_j] += 1
+                        w_mat[u_j,w] += 1
+                        w_mat[u_i,w] += 1
+                        w_mat[j,v] += 1
+
+                # Now, investigating w's neighbours
+                for j, el in enumerate(adj[w,:]):
+                    if j!=u_i and j!=u_j and j!=v and el==1:
+                        # tailed quadrangle found.
+                        w_mat[v,u_i] += 1
+                        w_mat[v,u_j] += 1
+                        w_mat[u_j,w] += 1
+                        w_mat[u_i,w] += 1
+                        w_mat[w,j] += 1
+                        # Because of undirected graphs symmetry
+                        w_mat[v,u_i] += 1
+                        w_mat[v,u_j] += 1
+                        w_mat[u_j,w] += 1
+                        w_mat[u_i,w] += 1
+                        w_mat[j,w] += 1
+
+                # Now, investigating u_j's neighbours
+                for j, el in enumerate(adj[u_j,:]):
+                    if j!=u_i and j!=v and j!=w and el==1:
+                        # tailed quadrangle found.
+                        w_mat[v,u_i] += 1
+                        w_mat[v,u_j] += 1
+                        w_mat[u_j,w] += 1
+                        w_mat[u_i,w] += 1
+                        w_mat[u_j,j] += 1
+                        # Because of undirected graphs symmetry
+                        w_mat[v,u_i] += 1
+                        w_mat[v,u_j] += 1
+                        w_mat[u_j,w] += 1
+                        w_mat[u_i,w] += 1
+                        w_mat[j,u_j] += 1
+
+                # Now, investigating u_i's neighbours
+                for j, el in enumerate(adj[u_i,:]):
+                    if j!=v and j!=u_j and j!=w and el==1:
+                        # tailed quadrangle found.
+                        w_mat[v,u_i] += 1
+                        w_mat[v,u_j] += 1
+                        w_mat[u_j,w] += 1
+                        w_mat[u_i,w] += 1
+                        w_mat[u_i,j] += 1
+                        # Because of undirected graphs symmetry
+                        w_mat[v,u_i] += 1
+                        w_mat[v,u_j] += 1
+                        w_mat[u_j,w] += 1
+                        w_mat[u_i,w] += 1
+                        w_mat[j,u_i] += 1
+
+    return w_mat
+
 def quadrangle(adj):
     '''
     # TODO: descrizione
@@ -319,9 +408,9 @@ def quadrangle(adj):
     w_mat = np.zeros((n,n), dtype=np.uint16)
 
     a, vertices_labels = sort_by_degree(adj)
-    quadrangle_list = counting_quadrangles(a, vertices_labels)
+    quadrangles_list = counting_quadrangles(a, vertices_labels)
 
-    for q in quadrangle_list:
+    for q in quadrangles_list:
         v = q[0]
         w = q[1]
         u_set = list(q[2])
