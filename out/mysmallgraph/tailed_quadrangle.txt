@@ -1,0 +1,2 @@
+Found 1 strongly connected components.
+#1 (len: 4): { A P U V }

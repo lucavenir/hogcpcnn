@@ -342,10 +342,10 @@ def tailed_quadrangle(adj):
                         w_mat[u_i,w] += 1
                         w_mat[v,j] += 1
                         # Because of undirected graphs symmetry
-                        w_mat[v,u_i] += 1
-                        w_mat[v,u_j] += 1
-                        w_mat[u_j,w] += 1
-                        w_mat[u_i,w] += 1
+                        w_mat[u_i,v] += 1
+                        w_mat[u_j,v] += 1
+                        w_mat[w,u_j] += 1
+                        w_mat[w,u_i] += 1
                         w_mat[j,v] += 1
 
                 # Now, investigating w's neighbours
@@ -358,10 +358,10 @@ def tailed_quadrangle(adj):
                         w_mat[u_i,w] += 1
                         w_mat[w,j] += 1
                         # Because of undirected graphs symmetry
-                        w_mat[v,u_i] += 1
-                        w_mat[v,u_j] += 1
-                        w_mat[u_j,w] += 1
-                        w_mat[u_i,w] += 1
+                        w_mat[u_i,v] += 1
+                        w_mat[u_j,v] += 1
+                        w_mat[w,u_j] += 1
+                        w_mat[w,u_i] += 1
                         w_mat[j,w] += 1
 
                 # Now, investigating u_j's neighbours
@@ -374,10 +374,10 @@ def tailed_quadrangle(adj):
                         w_mat[u_i,w] += 1
                         w_mat[u_j,j] += 1
                         # Because of undirected graphs symmetry
-                        w_mat[v,u_i] += 1
-                        w_mat[v,u_j] += 1
-                        w_mat[u_j,w] += 1
-                        w_mat[u_i,w] += 1
+                        w_mat[u_i,v] += 1
+                        w_mat[u_j,v] += 1
+                        w_mat[w,u_j] += 1
+                        w_mat[w,u_i] += 1
                         w_mat[j,u_j] += 1
 
                 # Now, investigating u_i's neighbours
@@ -390,10 +390,10 @@ def tailed_quadrangle(adj):
                         w_mat[u_i,w] += 1
                         w_mat[u_i,j] += 1
                         # Because of undirected graphs symmetry
-                        w_mat[v,u_i] += 1
-                        w_mat[v,u_j] += 1
-                        w_mat[u_j,w] += 1
-                        w_mat[u_i,w] += 1
+                        w_mat[u_i,v] += 1
+                        w_mat[u_j,v] += 1
+                        w_mat[w,u_j] += 1
+                        w_mat[w,u_i] += 1
                         w_mat[j,u_i] += 1
 
     return w_mat
