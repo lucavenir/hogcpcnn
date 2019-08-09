@@ -79,41 +79,176 @@ def vol(s, adj, m=None, m_instances=None):
     if m!=None and m_instances==None:  # if not given, we should compute it.
         m_instances = motif_instances(adj, m)
 
-def u_triangle(adj):
+def tailed_triangle(adj):
     '''
-        py:funcion:: motif_count(adj, m)
+        py:funcion:: tailed_triangle(adj)
 
-        Computing the undirected triangle occurences inside the graph; this
-        method is well explained by Chiba and Nishizeki (1985); but, instead of
-        enumerating all the triangles, our objective is to create the new W
-        matrix, with Wij = #triangles on the edge. In other words, we want to
-        count the edges participating in occurences of m (undirected triangle).
+        Computing the triangle (with a "tail") occurences inside the graph; this
+        method exploits triangle counting (see u_triangle); for each triangle found,
+        this method investigates if there's a neighbour for each of the triangle vertices
+        which isn't inside the triangle itself. If the answer is yes, that is a
+        tailed triangle.
+        As always, our objective is to create the new W matrix, with
+        Wij = #triangles on the edge.
+        In other words, we want to count the edges participating in occurences
+        of the motif considered (i.e., undirected triangle).
 
         :param adj: numpy NxN matrix, i.e. the adjacency matrix of the graph
 
-        :return: numpy NxN matrix, i.e. the new adj matrix representing the undirected triangle count
+        :return: numpy NxN matrix, i.e. the new adj matrix representing the motif count
     '''
-    a = np.copy(adj)
-    n = len(a)
+
+    n = len(adj)
     w_mat = np.zeros((n,n), dtype=np.uint16)
 
-    sorted_degrees = sorted(
-        [(i,sum(row)) for i,row in enumerate(a)],
-        reverse=True,
-        key=lambda t:t[1]
-    )
+    triangles_list = set()  # We want to save triangles, first.
+
+    # For the following code, comments can be found in u_triangle
+    nodes_degree =  [[i, sum(row)] for i,row in enumerate(adj)]
+    nodes_degree = np.array(nodes_degree)
+    a = np.append(nodes_degree, adj, axis=1)
+    l = list(a)
+    l.sort(key=lambda row:row[1], reverse=True)
+    a = np.array(l)
+    a = np.delete(a, 1, 1)
+    vertices_labels = np.zeros(n, dtype=np.uint16)
+    for j, el in enumerate(a[:,0]):
+        vertices_labels[el] = j
 
     for i, row in enumerate(a[:-2,:]):
-        # Iterating through all the rows, i.e. every node once exactly
-        v = sorted_degrees[i][0]  # Iterating from the highest degree to lowest
+        v = row[0]
+        colouring = [
+            True if w!=v and elem!=0 else False
+            for w, elem in enumerate(row[1:])
+        ]
+        for j, el in enumerate(row[1:]):
+            u = j
+            if el!=0 and u!=v:
+                for w, elem in enumerate(a[vertices_labels[u],1:]):
+                    if elem!=0 and colouring[w]:
+                        triangles_list.add((u,v,w))
+
+                # Removing the colour from u
+                colouring[u] = False
+
+        # Erasing v from the graph
+        a[i,1:] = 0  # The the '1:' is added to ignore the labels (first col)
+        a[:,i+1] = 0  # Again, we don't want to change the labeling.
+
+
+    # Now, for each triangle found, we want to investigate if they've got a tail
+    # A tail could be found in any of the three vertices of the triangle.
+    for triangle in triangles_list:
+        u = triangle[0]
+        v = triangle[1]
+        w = triangle[2]
+
+        # Investigating u's neighbours
+        for j, el in enumerate(adj[u,:]):
+            if j!=v and j!=w and el==1:
+                # tailed triangle found.
+                w_mat[u,v] += 1
+                w_mat[v,w] += 1
+                w_mat[w,u] += 1
+                w_mat[u,j] += 1
+                # Because of undirected graphs symmetry
+                w_mat[v,u] += 1
+                w_mat[w,v] += 1
+                w_mat[u,w] += 1
+                w_mat[j,u] += 1
+
+        # Investigating v's neighbours
+        for j, el in enumerate(adj[v,:]):
+            if j!=u and j!=w and el==1:
+                # tailed triangle found.
+                w_mat[u,v] += 1
+                w_mat[v,w] += 1
+                w_mat[w,u] += 1
+                w_mat[v,j] += 1
+                # Because of undirected graphs symmetry
+                w_mat[v,u] += 1
+                w_mat[w,v] += 1
+                w_mat[u,w] += 1
+                w_mat[j,v] += 1
+
+        # Investigating w's neighbours
+        for j, el in enumerate(adj[w,:]):
+            if j!=v and j!=u and el==1:
+                # tailed triangle found.
+                w_mat[u,v] += 1
+                w_mat[v,w] += 1
+                w_mat[w,u] += 1
+                w_mat[w,j] += 1
+                # Because of undirected graphs symmetry
+                w_mat[v,u] += 1
+                w_mat[w,v] += 1
+                w_mat[u,w] += 1
+                w_mat[j,w] += 1
+
+    return w_mat
+
+def u_triangle(adj):
+    '''
+        py:funcion:: u_triangle(adj)
+
+        Computing the triangle occurences inside the graph; this
+        method is well explained by Chiba and Nishizeki (1985).
+        As always, our objective is to create the new W matrix, with
+        Wij = #triangles on the edge.
+        In other words, we want to count the edges participating in occurences
+        of the motif considered (i.e., tailed triangle).
+
+        :param adj: numpy NxN matrix, i.e. the adjacency matrix of the graph
+
+        :return: numpy NxN matrix, i.e. the new adj matrix representing the motif count
+    '''
+    n = len(adj)
+    w_mat = np.zeros((n,n), dtype=np.uint16)
+
+    # Following Chiba and Nishizeki, we're interested in computing the nodes'
+    # degree, since we need to do the computation by that order:
+    # we do so by computing the following list.
+    # (element i stores the degree of vertex i)
+    nodes_degree =  [[i, sum(row)] for i,row in enumerate(adj)]
+
+    # We wanto to append this information to the original matrix.
+    # To do so, we transorm this list into an np array
+    nodes_degree = np.array(nodes_degree)  # note. shape: (n,2)
+
+    # Creating a copy of the matrix a, by appending the degrees we've just calculated
+    a = np.append(nodes_degree, adj, axis=1)
+
+    # We want to sort the rows of the adjacency matrix by the degree (i.e. sum)
+    # of themselves; to do so isn't straightforward, but here we go.
+    l = list(a)  # First, we move 'a' from a numpy array to a built-in list.
+
+    # We do so because the numpy "sorted" method can't accept lambdas.
+    l.sort(key=lambda row:row[1], reverse=True)  # This list is sortable with a lambda function.
+
+    # And now, we go back to our numpy matrix
+    a = np.array(l)
+    # We remove the (now) useless degree coloumn
+    # We want to keep the first coloumn, which labels correctly the rows
+    a = np.delete(a, 1, 1)
+
+    # Saving vertices indexes for later use.
+    vertices_labels = np.zeros(n, dtype=np.uint16)
+
+    # Saving the vertices _true_ labels for later
+    for j, el in enumerate(a[:,0]):
+        vertices_labels[el] = j
+
+    for i, row in enumerate(a[:-2,:]):  # last two vertices can be ignored (see paper)
+        v = row[0]  # The actual vertex' label
         colouring = [  # Colouring every neighbour of v
             True if w!=v and elem!=0 else False
-            for w, elem in enumerate(a[v,:])
+            for w, elem in enumerate(row[1:])
         ]
-        for j, el in enumerate(row[v+1:]):  # for each coloured neighbour u
-            if el!=0:  # the "coloured" condition is here
-                u = v+j+1  # We state who "u" is
-                for w, elem in enumerate(a[u,:]):
+
+        for j, el in enumerate(row[1:]):  # "for each coloured neighbour u"
+            u = j  # We state who "u" is
+            if el!=0 and u!=v:  # the "coloured" condition is here
+                for w, elem in enumerate(a[vertices_labels[u],1:]):
                     if elem!=0 and colouring[w]:
                         # If u and v share a neighbour, this is a triangle.
                         w_mat[u,v] += 1
@@ -123,12 +258,13 @@ def u_triangle(adj):
                         w_mat[v,u] += 1
                         w_mat[w,v] += 1
                         w_mat[u,w] += 1
-                        # triangles.add((v,u,w))
+
                 # Removing the colour from u
                 colouring[u] = False
+
         # Erasing v from the graph
-        a[v,:] = 0
-        a[:,v] = 0
+        a[i,1:] = 0  # The the '1:' is added to ignore the labels (first col)
+        a[:,i+1] = 0  # Again, we don't want to change the labeling.
 
     return w_mat
 
@@ -284,6 +420,7 @@ def diffusion_matrix(w, heat, alpha, epsilon, delta, method='AWPPR'):
 def extract_strong_cc(h):
     H = nx.from_numpy_matrix(h, create_using=nx.DiGraph())
     ccs = [H.subgraph(c) for c in nx.strongly_connected_components(H)]
+
     subgraphs = [
         set(cc.nodes)
         for cc in ccs
