@@ -84,11 +84,11 @@ def sort_by_degree(adj):
         py:funcion:: sort_by_degree(adj)
 
         Computing a new adjacency matrix, which rows are being sorted by the
-        sum of the row itself.
+        sum of the row itself (i.e. the degree of the node).
         This means that we're sorting the vertices' exploration by their degree.
         In the first coloumn of the new NxN+1 matrix, we find the label of that
-        row (i.e. the vertex).
-        Also, we're computing a map between the old and the news indexes (post-sorting).
+        row (i.e. the vertex itself, so that we don't lose track of it).
+        Also, we're computing a map between the old and the new indexes (post-sorting).
         Such map is useful to manipulate the graph later (i.e. motif counting).
 
         :param adj: numpy NxN matrix, i.e. the adjacency matrix of the graph
@@ -99,36 +99,36 @@ def sort_by_degree(adj):
 
     n = len(adj)
 
-    # Following Chiba and Nishizeki, we're interested in computing the nodes'
-    # degree, since we need to do the computation by that order:
+    # We're interested in computing the nodes' degree,
+    # since we need to do the computation by that order:
     # we do so by computing the following list.
-    # (element i stores the degree of vertex i)
+    # (element i stores the couple (i,degree of vertex i))
     nodes_degree =  [[i, sum(row)] for i,row in enumerate(adj)]
 
     # We wanto to append this information to the original matrix.
     # To do so, we transorm this list into an np array
     nodes_degree = np.array(nodes_degree)  # note. shape: (n,2)
 
-    # Creating a copy of the matrix a, by appending the degrees we've just calculated
+    # Creating a copy of the matrix a, by appending (to the left)
+    # the degrees we've just calculated
     a = np.append(nodes_degree, adj, axis=1)
 
     # We want to sort the rows of the adjacency matrix by the degree (i.e. sum)
     # of themselves; to do so isn't straightforward, but here we go.
     l = list(a)  # First, we move 'a' from a numpy array to a built-in list.
 
-    # We do so because the numpy "sorted" method can't accept lambdas.
+    # We do so because the numpy "sorted" method doesn't accept lambdas.
     l.sort(key=lambda row:row[1], reverse=True)  # This list is sortable with a lambda function.
 
     # And now, we go back to our numpy matrix
     a = np.array(l)
-    # We remove the (now) useless degree coloumn
-    # We want to keep the first coloumn, which labels correctly the rows
+    # We remove the (now) useless degree coloumn, but
+    # we're keeping the first coloumn, which correctly labels the rows/vertices
     a = np.delete(a, 1, 1)
 
-    # Saving vertices indexes for later use.
+    # Saving the vertices _true_ labels for later
     vertices_labels = np.zeros(n, dtype=np.uint16)
 
-    # Saving the vertices _true_ labels for later
     for j, el in enumerate(a[:,0]):
         vertices_labels[el] = j
 
@@ -136,26 +136,51 @@ def sort_by_degree(adj):
 
 def counting_quadrangles(a, vertices_labels):
     '''
-    # TODO: descrizione
+        py:funcion:: counting_quadrangles(a, vertices_labels)
+
+        This function takes in the matrix 'a' and the 'vertices_labels' list obtained
+        in the preprocessing phase (see sort_by_degree function), and returns a
+        list of quadrangles inside the graph.
+        As pointed out by the 1985 paper we're citing and using, one quadrangle
+        can be expressed by two vertices v and w, and a set of vertices u_i, such that
+        they're adjacent to both v and w.
+        The returned list will look like this:
+
+        set([(w,v, (u1, u2, ..., u_l)), ...])
+
+        :param a: numpy NxN+1 matrix, i.e. the new sorted_by_degree adj matrix
+        :param vertices_labels: list of size N, i.e. the map between old and new indexes.
+
+        :return: a list of tuples, representing the quadrangle in the graph.
     '''
+
+    # Creating the to-be-returned set, first.
     quadrangles_list = set()
 
-    # TODO: commentare il codice
     n = len(a)
 
     for i, row in enumerate(a):
+        # Extracting the true vertex label associated to this row
         v = row[0]
+
+        # This list represents the (u1, ..., u_l) set cited in the paper ("U")
         bipartition = [set() for i in range(n)]
         for j, el1 in enumerate(row[1:]):  # For each u adj to v
             u = j
             if el1!=0:  # if u is neighbour of v (i.e. adj to v)
+                # Then, the paper says that every neighbour of u is a
+                # "neighbour of distance 2 from v". There we go:
                 for k, el2 in enumerate(a[vertices_labels[u],1:]):  # For each w adj to u
                     w = k
                     # if w is neighbour of u (i.e. adj) and such that w!=v
                     if el2!=0 and w!=v:
+                        # We save every u "between" v and w.
                         bipartition[w].add(u)
 
+        # For each element in the bipartition list:
         for w, b in enumerate(bipartition):
+            # if the bipartition has at least two elements,
+            # we have the data structure ready, representing the quadrangle(s).
             if len(b)>1:
                 quadrangles_list.add((v,w,frozenset(b)))
 
@@ -167,12 +192,28 @@ def counting_quadrangles(a, vertices_labels):
 
 def counting_triangles(a, vertices_labels):
     '''
-    # TODO: scrivere la descrizione di questo metodo.
+        py:funcion:: counting_triangles(a, vertices_labels)
+
+        This function takes in the matrix 'a' and the 'vertices_labels' list obtained
+        in the preprocessing phase (see sort_by_degree function), and returns a
+        list of triangles inside the graph.
+        As pointed out by Chiba and Nishizeki (1985), one triangle can be
+        expressed by two vertices v and w that share a common neighbour u.
+        The returned list will look like this:
+
+        set([(w, v, u), ...])
+
+        :param a: numpy NxN+1 matrix, i.e. the new sorted_by_degree adj matrix
+        :param vertices_labels: list of size N, i.e. the map between old and new indexes.
+
+        :return: a list of tuples, representing the triangles in the graph.
     '''
 
     triangles_list = set()  # Used to save triangles.
 
-    for i, row in enumerate(a[:-2,:]):  # last two vertices can be ignored (see paper)
+    # The following algorithm is a straightforward implementation of the methods
+    # used in Chiba, Nishizeki (1985); you can check their paper for more info.
+    for i, row in enumerate(a[:-2,:]):
         v = row[0]  # The actual vertex' label
         colouring = [  # Colouring every neighbour of v
             True if w!=v and elem!=0 else False
@@ -183,7 +224,8 @@ def counting_triangles(a, vertices_labels):
             u = j  # We state who "u" is
             if el!=0 and u!=v:  # the "coloured" condition is here
                 for w, elem in enumerate(a[vertices_labels[u],1:]):
-                    if elem!=0 and colouring[w]:
+                    if elem!=0 and colouring[w]:  # is w a common neighbour?
+                        # triangle found
                         triangles_list.add((u,v,w))
 
                 # Removing the colour from u
@@ -207,7 +249,7 @@ def tailed_triangle(adj):
         As always, our objective is to create the new W matrix, with
         Wij = #triangles on the edge.
         In other words, we want to count the edges participating in occurences
-        of the motif considered (i.e., undirected triangle).
+        of the motif considered (i.e. undirected tailed triangle).
 
         :param adj: numpy NxN matrix, i.e. the adjacency matrix of the graph
 
@@ -218,8 +260,12 @@ def tailed_triangle(adj):
     w_mat = np.zeros((n,n), dtype=np.uint16)
 
 
+    # First, we sort the vertex exploration by their degree.
+    # We do so by creating a new matrix, "a", computed by the sort_by_degree
+    # function; this function also gives the old indexing.
     a, vertices_labels = sort_by_degree(adj)
-
+    # These two "ingredients" are now given to the function that counts the
+    # occurences of quadrangles inside the graph.
     triangles_list = counting_triangles(a, vertices_labels)
 
     # Now, for each triangle found, we want to investigate if they've got a tail
@@ -228,6 +274,10 @@ def tailed_triangle(adj):
         u = triangle[0]
         v = triangle[1]
         w = triangle[2]
+
+        # For each vertex in the triangle, we're investigating the presence of
+        # another neighbour which is not already participating in the triangle
+        # (i.e. the tail itself)
 
         # Investigating u's neighbours
         for j, el in enumerate(adj[u,:]):
@@ -282,7 +332,7 @@ def triangle(adj):
         As always, our objective is to create the new W matrix, with
         Wij = #triangles on the edge.
         In other words, we want to count the edges participating in occurences
-        of the motif considered (i.e., tailed triangle).
+        of the motif considered (i.e. triangle).
 
         :param adj: numpy NxN matrix, i.e. the adjacency matrix of the graph
 
@@ -291,7 +341,12 @@ def triangle(adj):
     n = len(adj)
     w_mat = np.zeros((n,n), dtype=np.uint16)
 
+    # First, we sort the vertex exploration by their degree.
+    # We do so by creating a new matrix, "a", computed by the sort_by_degree
+    # function; this function also gives the old indexing.
     a, vertices_labels = sort_by_degree(adj)
+    # These two "ingredients" are now given to the function that counts the
+    # occurences of quadrangles inside the graph.
     triangles_list = counting_triangles(a, vertices_labels)
 
     # Now, for each triangle found, we transition this into our motif_count matrix.
@@ -299,6 +354,8 @@ def triangle(adj):
         u = triangle[0]
         v = triangle[1]
         w = triangle[2]
+
+        # But we actually want to count the edges participating in this motif.
         w_mat[u,v] += 1
         w_mat[u,w] += 1
         w_mat[v,w] += 1
@@ -311,14 +368,31 @@ def triangle(adj):
 
 def tailed_quadrangle(adj):
     '''
-    # TODO: descrizione
+        py:funcion:: tailed_quadrangle(adj)
+
+        Computing the tailed quadrangle occurences inside the graph; the quadrangle
+        method is well explained by Chiba and Nishizeki (1985). For each quadrangle,
+        it is easy to find a tailed motif iff a vertex in the quadrangle has a
+        neighbour which is not inside the quadrangle itself.
+        As always, our objective is to create the new W matrix, with
+        Wij = #triangles on the edge.
+        In other words, we want to count the edges participating in occurences
+        of the motif considered (i.e. tailed quadrangles).
+
+        :param adj: numpy NxN matrix, i.e. the adjacency matrix of the graph
+
+        :return: numpy NxN matrix, i.e. the new adj matrix representing the motif count
     '''
 
-    # TODO: commentare il codice
     n = len(adj)
     w_mat = np.zeros((n,n), dtype=np.uint16)
 
+    # First, we sort the vertex exploration by their degree.
+    # We do so by creating a new matrix, "a", computed by the sort_by_degree
+    # function; this function also gives the old indexing.
     a, vertices_labels = sort_by_degree(adj)
+    # These two "ingredients" are now given to the function that counts the
+    # occurences of quadrangles inside the graph.
     quadrangles_list = counting_quadrangles(a, vertices_labels)
 
     # Now, for each quadrangle found, we want to investigate if they've got
@@ -327,10 +401,16 @@ def tailed_quadrangle(adj):
         v = q[0]
         w = q[1]
         u_set = list(q[2])
+
+        # Just like in the quadrangle method, we're explorating every possible
+        # combination of u_i, u_j (with i!=j)
         for i, u_i in enumerate(u_set):
             for u_j in u_set[i+1:]:
                 # Here, we have our quadrangle:
                 # (v,w,u_i,u_j)
+
+                # For each quadrangle, we're now investigating the presence of a
+                # "tail", similarly to what we've done in 'tailed_triangle'
 
                 # Now, investigating v's neighbours
                 for j, el in enumerate(adj[v,:]):
@@ -400,28 +480,52 @@ def tailed_quadrangle(adj):
 
 def quadrangle(adj):
     '''
-    # TODO: descrizione
+        py:funcion:: quadrangle(adj)
+
+        Computing the quadrangle occurences inside the graph; this
+        method is well explained by Chiba and Nishizeki (1985).
+        As always, our objective is to create the new W matrix, with
+        Wij = #triangles on the edge.
+        In other words, we want to count the edges participating in occurences
+        of the motif considered (i.e. quadrangles).
+
+        :param adj: numpy NxN matrix, i.e. the adjacency matrix of the graph
+
+        :return: numpy NxN matrix, i.e. the new adj matrix representing the motif count
     '''
 
-    # TODO: commentare il codice
     n = len(adj)
     w_mat = np.zeros((n,n), dtype=np.uint16)
 
+    # First, we sort the vertex exploration by their degree.
+    # We do so by creating a new matrix, "a", computed by the sort_by_degree
+    # function; this function also gives the old indexing.
     a, vertices_labels = sort_by_degree(adj)
+    # These two "ingredients" are now given to the function that counts the
+    # occurences of quadrangles inside the graph.
     quadrangles_list = counting_quadrangles(a, vertices_labels)
 
+    # The quadrangles found inside the graph are actually stored in this list
+    # in a way well explained in Chiba and Nishizeki (1985). Check the function
+    # called "counting_quadrangles" to check the data structure's format.
     for q in quadrangles_list:
         v = q[0]
         w = q[1]
+        # u_set is the set of vertices that form a complete bipartition.
+        # (i.e. nodes in u are adjacent to both v and w)
         u_set = list(q[2])
+
+        # For this reason, to completely enumerate every quadrangle inside this
+        # set, we should consider every possible combination in the u_set.
         for i, u_i in enumerate(u_set):
             for u_j in u_set[i+1:]:
+                # For every quadrangle found, we save the occurences.
                 w_mat[v,u_i] += 1
                 w_mat[v,u_j] += 1
                 w_mat[u_j,w] += 1
                 w_mat[u_i,w] += 1
 
-                # Symmetry:
+                # And, because of symmetry:
                 w_mat[u_i,v] += 1
                 w_mat[u_j,v] += 1
                 w_mat[w,u_j] += 1
