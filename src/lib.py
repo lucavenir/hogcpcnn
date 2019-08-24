@@ -403,7 +403,7 @@ def tailed_quadrangle(adj):
         u_set = list(q[2])
 
         # Just like in the quadrangle method, we're explorating every possible
-        # combination of u_i, u_j (with i!=j)
+        # combination of u_i, u_j (with 1<=i<j<=N)
         for i, u_i in enumerate(u_set):
             for u_j in u_set[i+1:]:
                 # Here, we have our quadrangle:
@@ -414,7 +414,7 @@ def tailed_quadrangle(adj):
 
                 # Now, investigating v's neighbours
                 for j, el in enumerate(adj[v,:]):
-                    if j!=u_i and j!=u_j and j!=w and el==1:
+                    if j!=v and j!=u_i and j!=u_j and j!=w and el==1:
                         # tailed quadrangle found.
                         w_mat[v,u_i] += 1
                         w_mat[v,u_j] += 1
@@ -430,7 +430,7 @@ def tailed_quadrangle(adj):
 
                 # Now, investigating w's neighbours
                 for j, el in enumerate(adj[w,:]):
-                    if j!=u_i and j!=u_j and j!=v and el==1:
+                    if j!=v and j!=u_i and j!=u_j and j!=w and el==1:
                         # tailed quadrangle found.
                         w_mat[v,u_i] += 1
                         w_mat[v,u_j] += 1
@@ -446,7 +446,7 @@ def tailed_quadrangle(adj):
 
                 # Now, investigating u_j's neighbours
                 for j, el in enumerate(adj[u_j,:]):
-                    if j!=u_i and j!=v and j!=w and el==1:
+                    if j!=v and j!=u_i and j!=u_j and j!=w and el==1:
                         # tailed quadrangle found.
                         w_mat[v,u_i] += 1
                         w_mat[v,u_j] += 1
@@ -462,7 +462,7 @@ def tailed_quadrangle(adj):
 
                 # Now, investigating u_i's neighbours
                 for j, el in enumerate(adj[u_i,:]):
-                    if j!=v and j!=u_j and j!=w and el==1:
+                    if j!=v and j!=u_i and j!=u_j and j!=w and el==1:
                         # tailed quadrangle found.
                         w_mat[v,u_i] += 1
                         w_mat[v,u_j] += 1
