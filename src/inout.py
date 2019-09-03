@@ -13,7 +13,7 @@ def parse_command_line():
     Command line parsing:
     algorithms here should be queried via command line, only.
     """
-    # TODO: maybe useful, maybe not. tbd.
+
     current_time = time.time()
     timestamp = datetime.datetime.fromtimestamp(current_time).strftime('%Y%m%d_%H:%M:%S')
     default_folder = "run__" + timestamp
@@ -24,23 +24,29 @@ def parse_command_line():
         'motif': 'triangle',
         'method': 'HOTNET2',
         'soft': False,
+        'delta': 0.000496,  # this default value comes from HotNet2: it doesn't necessary makes sense
         'timestamp': timestamp  # for now, this will be ignored
     }
 
     parser = argparse.ArgumentParser(description='Parser to receive user preferences and/or parameters.')
 
     # Input folder
-    parser.add_argument('-d', type=str, help='Name of the dataset used')
+    parser.add_argument('-db', type=str, help='Name of the dataset used')
     # Motif searched
     parser.add_argument('-m', type=str, help='Motif type')
     # Diffusion process algorithm selection
     parser.add_argument('-f', type=str, help='Method to compute f')
+    # Delta parameter selection
+    parser.add_argument('-d', type=float, help='Cut-off value for edges in the graph H')
     # Soft version of the problem?
     parser.add_argument('-s', action='store_true', help='Type -s to enable the soft version')
     args = parser.parse_args()
 
     if args.d:
-        parameters['dataset'] = args.d
+        parameters['delta'] = float(args.d)
+
+    if args.db:
+        parameters['dataset'] = args.db
 
     if args.m:
         parameters['motif'] = args.m
@@ -193,28 +199,27 @@ def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='t
                 str(vertex_number)+' '+str(heat)+'\n'
             )
 
-def write_output(s_cc_list, v_labels, dataset_name='HINT+HI2012', motif_name='triangle', soft=False):
+def write_strong_ccs(s_cc_list, v_labels, parameters):
     # For compatibility issues, we're extracting the absolute path of the project.
     abs_path = os.path.dirname(os.path.abspath(__file__))
-    project_path = abs_path[:-3]  # This will work just bc of the name of this dir ('src')
+    project_path = abs_path[:-3]  # WARNING: This will work just bc of the name of this dir ('src')
 
-    out_path = project_path+'/out/'+dataset_name+'/'
+    out_path = project_path+'/out/'+parameters['dataset']+'/'
     try:
         os.mkdir(out_path)
     except FileExistsError:
         pass
 
-    '''
-    # IDEA: this might be useful later, maybe.
-    out_path += motif_name+'/'
+    if parameters['soft']:
+        motif_name += '_s'
+
+    out_path += 'delta='+str(parameters['delta'])+'/'
     try:
         os.mkdir(out_path)
     except FileExistsError:
-        pass'''
+        pass
 
-    if soft:
-        motif_name += '_s'
-    filename = motif_name+'.txt'
+    filename = parameters['motif']+'_delta='+str(parameters['delta'])+'.txt'
     with open(out_path+filename, 'w') as outfp:
         m = len(s_cc_list)
         outfp.write("Found "+str(m)+" strongly connected components.\n")
@@ -227,8 +232,6 @@ def write_output(s_cc_list, v_labels, dataset_name='HINT+HI2012', motif_name='tr
             for el in set_list:
                 outfp.write(' '+str(v_labels[el]))
             outfp.write(' }\n')
-
-
 
 def read_from_temp(dataset_name='HINT+HI2012', motif_name='triangle'):
     """

@@ -83,159 +83,257 @@ def sort_by_degree(adj):
     '''
         py:funcion:: sort_by_degree(adj)
 
-        Computing a new adjacency matrix, which rows are being sorted by the
-        sum of the row itself (i.e. the degree of the node).
-        This means that we're sorting the vertices' exploration by their degree.
-        In the first coloumn of the new NxN+1 matrix, we find the label of that
-        row (i.e. the vertex itself, so that we don't lose track of it).
-        Also, we're computing a map between the old and the new indexes (post-sorting).
-        Such map is useful to manipulate the graph later (i.e. motif counting).
+        Computing a vector representing the non-increasing degree order of the vertices.
+        This function has been wrote because we're looking for an by their degree
+        (from the highest to the lowest).
 
         :param adj: numpy NxN matrix, i.e. the adjacency matrix of the graph
 
-        :return: numpy NxN+1 matrix, i.e. the new sorted_by_degree adj matrix
-        :return: list of size N, i.e. the map between old and new indexes.
+        :return: numpy 1xN vector, i.e. the non-increasing order by degree from the adj matrix
     '''
 
     n = len(adj)
 
-    # We're interested in computing the nodes' degree,
-    # since we need to do the computation by that order:
-    # we do so by computing the following list.
-    # (element i stores the couple (i,degree of vertex i))
-    nodes_degree =  [[i, sum(row)] for i,row in enumerate(adj)]
+    vertices = [i for i in range(n)]  # Yet to be ordered
+    nodes_degree = [sum(row) for row in adj]  # Computing the nodes' degree
 
-    # We wanto to append this information to the original matrix.
-    # To do so, we transorm this list into an np array
-    nodes_degree = np.array(nodes_degree)  # note. shape: (n,2)
+    ordered_vertices = sorted(
+        vertices,
+        key=lambda i:nodes_degree[i],
+        reverse=True
+    )
 
-    # Creating a copy of the matrix a, by appending (to the left)
-    # the degrees we've just calculated
-    a = np.append(nodes_degree, adj, axis=1)
+    # We return it as an Numpy array; we just love Numpy
+    return np.array(ordered_vertices)
 
-    # We want to sort the rows of the adjacency matrix by the degree (i.e. sum)
-    # of themselves; to do so isn't straightforward, but here we go.
-    l = list(a)  # First, we move 'a' from a numpy array to a built-in list.
-
-    # We do so because the numpy "sorted" method doesn't accept lambdas.
-    l.sort(key=lambda row:row[1], reverse=True)  # This list is sortable with a lambda function.
-
-    # And now, we go back to our numpy matrix
-    a = np.array(l)
-    # We remove the (now) useless degree coloumn, but
-    # we're keeping the first coloumn, which correctly labels the rows/vertices
-    a = np.delete(a, 1, 1)
-
-    # Saving the vertices _true_ labels for later
-    vertices_labels = np.zeros(n, dtype=np.uint16)
-
-    for j, el in enumerate(a[:,0]):
-        vertices_labels[el] = j
-
-    return a, vertices_labels
-
-def counting_quadrangles(a, vertices_labels):
+def counting_quadrangles(adj):
     '''
-        py:funcion:: counting_quadrangles(a, vertices_labels)
+        py:funcion:: counting_quadrangles(adj)
 
-        This function takes in the matrix 'a' and the 'vertices_labels' list obtained
-        in the preprocessing phase (see sort_by_degree function), and returns a
-        list of quadrangles inside the graph.
+        This function takes in the adjacency matrix adj and returns a list of
+        quadrangles inside the graph.
+
         As pointed out by the 1985 paper we're citing and using, one quadrangle
-        can be expressed by two vertices v and w, and a set of vertices u_i, such that
-        they're adjacent to both v and w.
+        can be expressed by two vertices v and w, and a set of vertices U, such that
+        they're adjacent to both v and w. Such set U is called "bipartition" and
+        to form a quadrangle, at least two vertices must be in there.
         The returned list will look like this:
 
         set([(w,v, (u1, u2, ..., u_l)), ...])
 
-        :param a: numpy NxN+1 matrix, i.e. the new sorted_by_degree adj matrix
-        :param vertices_labels: list of size N, i.e. the map between old and new indexes.
+        :param a: numpy NxN matrix, i.e. the adjacency matrix
 
-        :return: a list of tuples, representing the quadrangle in the graph.
+        :return: a list of tuples, representing the quadrangles in the graph.
     '''
 
     # Creating the to-be-returned set, first.
-    quadrangles_list = set()
+    quadrangles_list = list()
+    n = len(adj)  # The graph 'size'
+    a = np.copy(adj)  # Deepcopying the adj matrix, so that we won't modify the original one
 
-    n = len(a)
+    # Implementing, again, the Chiba-Nishizeki algorithm for 'quadrangles'.
 
-    for i, row in enumerate(a):
-        # Extracting the true vertex label associated to this row
-        v = row[0]
+    # As demanded by the algorithm, the vertices exploration must go by their
+    # degree, with a non-increasing order
+    ordered_vertices = sort_by_degree(adj)
 
+    for v in ordered_vertices:
         # This list represents the (u1, ..., u_l) set cited in the paper ("U")
-        bipartition = [set() for i in range(n)]
-        for j, el1 in enumerate(row[1:]):  # For each u adj to v
-            u = j
+        bipartitions = [[] for i in range(n)]
+
+        for u, el1 in enumerate(adj[v,:]):  # For each u adj to v
             if el1!=0:  # if u is neighbour of v (i.e. adj to v)
                 # Then, the paper says that every neighbour of u is a
                 # "neighbour of distance 2 from v". There we go:
-                for k, el2 in enumerate(a[vertices_labels[u],1:]):  # For each w adj to u
-                    w = k
+                for w, el2 in enumerate(adj[u,:]):  # For each w adj to u
                     # if w is neighbour of u (i.e. adj) and such that w!=v
                     if el2!=0 and w!=v:
                         # We save every u "between" v and w.
-                        bipartition[w].add(u)
+                        bipartitions[w].append(u)
 
         # For each element in the bipartition list:
-        for w, b in enumerate(bipartition):
+        for w, b in enumerate(bipartitions):
             # if the bipartition has at least two elements,
             # we have the data structure ready, representing the quadrangle(s).
             if len(b)>1:
-                quadrangles_list.add((v,w,frozenset(b)))
+                quadrangles_list.append((v,w,b))
 
         # Erasing v from the graph
-        a[i,1:] = 0  # The the '1:' is added to ignore the labels (first col)
-        a[:,i+1] = 0  # Again, we don't want to change the labeling.
+        a[v,:] = 0
+        a[:,v] = 0
 
     return quadrangles_list
 
-def counting_triangles(a, vertices_labels):
+def k_bron_kerbosch(a, vertices_labels, r, p, x, cliques_list=[], k=4):
     '''
-        py:funcion:: counting_triangles(a, vertices_labels)
+        py:funcion:: k_bron_kerbosch(a, vertices_labels, r, p, x, cliques_list=set(), k=4)
 
         This function takes in the matrix 'a' and the 'vertices_labels' list obtained
         in the preprocessing phase (see sort_by_degree function), and returns a
-        list of triangles inside the graph.
+        list of k-sized cliques inside the graph.
+        This method uses an adaptation of the Bron-Kerbosch algorithm, that instead of
+        searching for MAXIMAL cliques inside our graph, it searches for cliques of
+        size k. This algorithm runs in O(nk), and it is efficient as long as
+        k = 0(log(n)). This algorithm is recursive. Pseudocode:
+
+        k_BronKerbosch(R, P, X, k):
+            if |R| = k:
+                report R as a k-clique
+            else
+                choose a pivot u in P ⋃ X
+                for each vertex v in P-N(u):
+                    BronKerbosch1(R ⋃ {v}, P ⋂ N(v), X ⋂ N(v))
+                    P := P - {v}
+                    X := X ⋃ {v}
+
+        The returned list will look like this:
+
+        [(v_1,v_2,...,v_k), ...]
+
+        # TODO: fare la descrizione delle variabili e il loro ruolo
+        :param a: numpy NxN+1 matrix, i.e. the new sorted_by_degree adj matrix
+        :param vertices_labels: list of size N, i.e. the map between old and new indexes.
+        :param k: positive integer, i.e. the size of the clique we're investigating
+        :return: a list of tuples, representing the quadrangle in the graph.
+    '''
+
+    # If the length of the clique-set is k, we've found the k-sized clique
+    # we've been looking for.
+    if len(r)==k:
+        return [r]  # We return it as a list, so that we can merge it later
+
+    if len(p)==0:
+        return [r]
+
+    # Next, we want to implement:
+    # "choose a pivot u in P ⋃ X"
+    x_U_p = list(x|p)  # This is the union between p and x.
+    if len(x_U_p)==0:
+        return []
+
+    # Pivoting phase.
+    # We want to find the vertex which has the highest degree among the xUp set
+    u_min = np.argmin(vertices_labels[x_U_p])
+    u = x_U_p[u_min]  # Vertex u s.t. degree is maximum in the set P⋃X
+
+    # Then, we extract every neighbour of u. We want it to be a set so that
+    # we can do the p-N(u) described in the algorithm.
+    neighbours_u = set([
+    	i
+    	for i, el in enumerate(a[vertices_labels[u],1:])
+    	if el==1
+    ])
+
+    for v in p-neighbours_u:
+        # Recursive step of the algorithm
+        cliques_list += k_bron_kerbosch(
+            a,
+            vertices_labels,
+            r|{v},
+            p&neighbours_u,
+            x&neighbours_u,
+            cliques_list=cliques_list,
+            k=k
+        )
+        p.remove(v)
+        x.add(u)
+
+    return cliques_list
+
+def counting_triangles(adj):
+    '''
+        py:funcion:: counting_triangles(a, vertices_labels)
+
+        This function takes in the adjacency matrix adj and returns a list of
+        triangles inside the graph.
+
         As pointed out by Chiba and Nishizeki (1985), one triangle can be
         expressed by two vertices v and w that share a common neighbour u.
         The returned list will look like this:
 
         set([(w, v, u), ...])
 
-        :param a: numpy NxN+1 matrix, i.e. the new sorted_by_degree adj matrix
-        :param vertices_labels: list of size N, i.e. the map between old and new indexes.
+        :param adj: numpy NxN matrix, i.e. the adjacency matrix
 
         :return: a list of tuples, representing the triangles in the graph.
     '''
 
-    triangles_list = set()  # Used to save triangles.
+    triangles_list = list()  # Used to save triangles.
+    a = np.copy(adj)  # Deepcopying the adj matrix, so that we won't modify the original one
 
     # The following algorithm is a straightforward implementation of the methods
     # used in Chiba, Nishizeki (1985); you can check their paper for more info.
-    for i, row in enumerate(a[:-2,:]):
-        v = row[0]  # The actual vertex' label
+
+    # As demanded by the algorithm, the vertices exploration must go by their
+    # degree, with a non-increasing order
+    ordered_vertices = sort_by_degree(adj)
+
+    for v in ordered_vertices[:-2]:
         colouring = [  # Colouring every neighbour of v
-            True if w!=v and elem!=0 else False
-            for w, elem in enumerate(row[1:])
+            True if w!=v and el!=0 else False
+            for w, el in enumerate(a[v,:])
         ]
 
-        for j, el in enumerate(row[1:]):  # "for each coloured neighbour u"
-            u = j  # We state who "u" is
-            if el!=0 and u!=v:  # the "coloured" condition is here
-                for w, elem in enumerate(a[vertices_labels[u],1:]):
-                    if elem!=0 and colouring[w]:  # is w a common neighbour?
+        for u, el1 in enumerate(a[v,:]):  # "for each 'coloured' neighbour of v, say u"
+            if el1!=0 and u!=v:  # the 'coloured' condition is here
+                for w, el2 in enumerate(a[u,:]):  # Then, search for common neighbours
+                    if el2!=0 and colouring[w]:  # is w a common neighbour?
                         # triangle found
-                        triangles_list.add((u,v,w))
+                        triangles_list.append((u,v,w))
 
                 # Removing the colour from u
                 colouring[u] = False
 
-        # Erasing v from the graph
-        a[i,1:] = 0  # The the '1:' is added to ignore the labels (first col)
-        a[:,i+1] = 0  # Again, we don't want to change the labeling.
+        # 'Erasing' v from the graph to prevent duplicates
+        a[v,:] = 0
+        a[:,v] = 0
 
     return triangles_list
+
+def clique(adj, k=4):
+    '''
+        ... # TODO: descrizione
+    '''
+
+    n = len(adj)
+    w_mat = np.zeros((n,n), dtype=np.uint32)
+
+    # A little verification on the clique size given.
+    int_k = int(k)  # We also want to make sure the size is an int number.
+    if k<4:
+        print("WARNING: Clique size is weird (given: "+str(k)+")")
+        if k==2:
+            print("Computing the classic HOTNET2 algorithm")
+            print("You can obtain the same results with by typing the option:")
+            print("-m no")
+            print("when launching this script.")
+            return no(adj)
+        elif k==3:
+            print("Computing the triangle counting algorithm")
+            print("You can obtain the same results with by typing the option:")
+            print("-m triangle")
+            print("when launching this script.")
+            return triangle(adj)
+        elif k!=int_k:
+            raise ValueError("A clique with floating point size isn't acceptable")
+        else:
+            raise ValueError("The size given is too small. We reccomend 4<=k<=7")
+
+    
+    for c in cliques_list:
+        # c is a set containing a clique of k elements.
+        # Therefore, every possible edge of the weighted graph receives a +1
+        c_list = list(c)  # Because we want to index it in order to fully enumerate
+        for index, i in enumerate(c_list):
+            for j in c_list[index+1:]:
+                w_mat[i,j] += 1
+
+                # Because of symmetry
+                w_mat[j,i] += 1
+
+    print(w_mat)
+    input()
+    return w_mat
 
 def tailed_triangle(adj):
     '''
@@ -257,16 +355,10 @@ def tailed_triangle(adj):
     '''
 
     n = len(adj)
-    w_mat = np.zeros((n,n), dtype=np.uint16)
+    w_mat = np.zeros((n,n), dtype=np.uint32)
 
-
-    # First, we sort the vertex exploration by their degree.
-    # We do so by creating a new matrix, "a", computed by the sort_by_degree
-    # function; this function also gives the old indexing.
-    a, vertices_labels = sort_by_degree(adj)
-    # These two "ingredients" are now given to the function that counts the
-    # occurences of quadrangles inside the graph.
-    triangles_list = counting_triangles(a, vertices_labels)
+    # First, we call the function that actually counts triangles in the graph
+    triangles_list = counting_triangles(adj)
 
     # Now, for each triangle found, we want to investigate if they've got a tail
     # A tail could be found in any of the three vertices of the triangle.
@@ -339,15 +431,10 @@ def triangle(adj):
         :return: numpy NxN matrix, i.e. the new adj matrix representing the motif count
     '''
     n = len(adj)
-    w_mat = np.zeros((n,n), dtype=np.uint16)
+    w_mat = np.zeros((n,n), dtype=np.uint32)
 
-    # First, we sort the vertex exploration by their degree.
-    # We do so by creating a new matrix, "a", computed by the sort_by_degree
-    # function; this function also gives the old indexing.
-    a, vertices_labels = sort_by_degree(adj)
-    # These two "ingredients" are now given to the function that counts the
-    # occurences of quadrangles inside the graph.
-    triangles_list = counting_triangles(a, vertices_labels)
+    # First, we call the function that actually counts triangles in the graph
+    triangles_list = counting_triangles(adj)
 
     # Now, for each triangle found, we transition this into our motif_count matrix.
     for triangle in triangles_list:
@@ -385,14 +472,9 @@ def tailed_quadrangle(adj):
     '''
 
     n = len(adj)
-    w_mat = np.zeros((n,n), dtype=np.uint16)
+    w_mat = np.zeros((n,n), dtype=np.uint32)
 
-    # First, we sort the vertex exploration by their degree.
-    # We do so by creating a new matrix, "a", computed by the sort_by_degree
-    # function; this function also gives the old indexing.
-    a, vertices_labels = sort_by_degree(adj)
-    # These two "ingredients" are now given to the function that counts the
-    # occurences of quadrangles inside the graph.
+    # First, we call the function that actually counts quadrangles in the graph
     quadrangles_list = counting_quadrangles(a, vertices_labels)
 
     # Now, for each quadrangle found, we want to investigate if they've got
@@ -495,15 +577,10 @@ def quadrangle(adj):
     '''
 
     n = len(adj)
-    w_mat = np.zeros((n,n), dtype=np.uint16)
+    w_mat = np.zeros((n,n), dtype=np.uint32)
 
-    # First, we sort the vertex exploration by their degree.
-    # We do so by creating a new matrix, "a", computed by the sort_by_degree
-    # function; this function also gives the old indexing.
-    a, vertices_labels = sort_by_degree(adj)
-    # These two "ingredients" are now given to the function that counts the
-    # occurences of quadrangles inside the graph.
-    quadrangles_list = counting_quadrangles(a, vertices_labels)
+    # First, we call the function that actually counts quadrangles_list in the graph
+    quadrangles_list = counting_quadrangles(adj)
 
     # The quadrangles found inside the graph are actually stored in this list
     # in a way well explained in Chiba and Nishizeki (1985). Check the function
@@ -573,6 +650,9 @@ def filter_disconnected_components(motif_mat, inputs):
     k = len(motif_mat_filtered)
     print("Filtered out "+str(n-k)+" disconnected nodes")
 
+    # Re-write them by reference, in place, so that we don't need to return
+    # the new indexes.
+    # TODO: We've de-bugged this already, but I want to be sure it works. # DEBUG: further debugging
     inputs['v_labels'] = np.delete(
         inputs['v_labels'],
         disconnected_vertices
@@ -677,7 +757,7 @@ def diffusion_matrix(w, heat, alpha, epsilon, delta, method='AWPPR'):
     # Then, applying the diffusion process, thus obtaining E
     e = np.dot(f,np.diag(heat))
     # Now, obtaining the H matrix, via pruning.
-    h = np.zeros((n,n), dtype=np.uint16)
+    h = np.zeros((n,n), dtype=np.uint32)
     h[e>=delta] = 1
 
     return h

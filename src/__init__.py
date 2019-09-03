@@ -19,6 +19,7 @@ def main():
             dataset_name=parameters['dataset'],
             motif_name=None  # i.e. load default inputs only
         )
+        # TODO: comment a little more from now on
         motif_function = getattr(l, parameters['motif'])
         motif_matrix = motif_function(adj=inputs['adj'])
         if parameters['soft']:
@@ -53,9 +54,9 @@ def main():
     h = l.diffusion_matrix(
         w=inputs['w'],
         heat=inputs['heat'],
-        alpha=0.5,
-        epsilon=0.001,
-        delta=0.05,
+        alpha=0.6,  # It doesn't make sense to modify this parameter (for now)
+        epsilon=0.001,  # This is the (fixed) approximation for the APPR algorithm
+        delta=parameters['delta'],
         method=parameters['method']
     )
 
@@ -64,12 +65,10 @@ def main():
     strong_cc = l.extract_strong_cc(h)
 
     # (6): Saving to an output file such strong components.
-    io.write_output(
+    io.write_strong_ccs(
         s_cc_list=strong_cc,
         v_labels=inputs['v_labels'],
-        dataset_name=parameters['dataset'],
-        motif_name=parameters['motif'],
-        soft=parameters['soft']
+        parameters=parameters
     )
 
 
