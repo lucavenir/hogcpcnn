@@ -300,8 +300,10 @@ def clique(adj, k=4):
 
     # A little verification on the clique size given.
     int_k = int(k)  # We also want to make sure the size is an int number.
+    if k!=int_k:
+        raise ValueError("A clique with floating point size isn't acceptable")
     if k<4:
-        print("WARNING: Clique size is weird (given: "+str(k)+")")
+        print("WARNING: Clique size is 'low' (given: "+str(k)+")")
         if k==2:
             print("Computing the classic HOTNET2 algorithm")
             print("You can obtain the same results with by typing the option:")
@@ -314,12 +316,9 @@ def clique(adj, k=4):
             print("-m triangle")
             print("when launching this script.")
             return triangle(adj)
-        elif k!=int_k:
-            raise ValueError("A clique with floating point size isn't acceptable")
         else:
-            raise ValueError("The size given is too small. We reccomend 4<=k<=7")
+            raise ValueError("The size given is too small. We advise 4<=k<=7")
 
-    
     for c in cliques_list:
         # c is a set containing a clique of k elements.
         # Therefore, every possible edge of the weighted graph receives a +1
