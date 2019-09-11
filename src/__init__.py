@@ -9,7 +9,8 @@ def main():
         inputs = io.load_input(
             dataset_name=parameters['dataset'],
             motif_name=parameters['motif'],
-            soft=parameters['soft']
+            soft=parameters['soft'],
+            k=parameters['k']
         )
     except FileNotFoundError:
         # (3): If at least one file isn't found, we must re-compute everything.
@@ -21,7 +22,13 @@ def main():
         )
         # TODO: comment a little more from now on
         motif_function = getattr(l, parameters['motif'])
-        motif_matrix = motif_function(adj=inputs['adj'])
+        if parameters['motif'] == 'clique':
+            motif_matrix = motif_function(
+                adj=inputs['adj'],
+                k=parameters['k']
+            )
+        else:
+            motif_matrix = motif_function(adj=inputs['adj'])
         if parameters['soft']:
             motif_matrix_filtered = motif_matrix
         else:
@@ -41,13 +48,15 @@ def main():
             w=w,
             dataset_name=parameters['dataset'],
             motif_name=parameters['motif'],
-            soft=parameters['soft']
+            soft=parameters['soft'],
+            k=parameters['k']
         )
         # Now, we can finally load the temp files.
         inputs = io.load_input(
             dataset_name=parameters['dataset'],
             motif_name=parameters['motif'],
-            soft=parameters['soft']
+            soft=parameters['soft'],
+            k=parameters['k']
         )
 
     # (4): Start the diffusion algorithm.

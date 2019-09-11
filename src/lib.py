@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 import sys
 import networkx as nx
+import itertools
 
 # TODO: saranno funzioni davvero utili, queste?
 def conductance(s, adj, m=None, m_instances=None):
@@ -95,7 +96,7 @@ def sort_by_degree(adj):
     n = len(adj)
 
     vertices = [i for i in range(n)]  # Yet to be ordered
-    nodes_degree = [sum(row) for row in adj]  # Computing the nodes' degree
+    nodes_degree = [sum(row) for row in adj]  # Computing the nodes' degrees
 
     ordered_vertices = sorted(
         vertices,
@@ -104,7 +105,102 @@ def sort_by_degree(adj):
     )
 
     # We return it as an Numpy array; we just love Numpy
-    return np.array(ordered_vertices)
+    return np.array(ordered_vertices, dtype=np.uint32)
+
+def min_degree(adj):
+    '''
+        # TODO: documentare
+    '''
+    nodes_degree = [sum(row) for row in adj]  # Computing the nodes' degrees
+    return np.argmin(np.array(nodes_degree))
+
+def sort_by_core(adj):
+    '''
+        # TODO: documentare
+    '''
+    n = len(adj)
+    a = np.copy(adj)
+
+    ordered_vertices = np.zeros(n, dtype=np.uint32)
+
+    for i, in range(n-1):
+        v = min_degree(a)  # picking the minimum-degree vertex
+        ordered_vertices[i] = v
+        # Erasing v from the graph
+        a[v,:] = 0
+        a[:,v] = 0
+
+    return np.flip(ordered_vertices, 0)
+
+def nu(adj):
+    '''
+        # TODO: commentare e descrivere questa funzione
+    '''
+
+    n = len(adj)
+    degree_ordering = sort_by_degree(adj)
+    core_ordering = sort_by_core(adj)
+
+    return np.array(
+        sorted(
+            degree_ordering.tolist(),
+            reverse=True,
+            key=lambda i:core_ordering[i]
+        )
+    )
+
+def dag(adj, nu):
+    '''
+        # TODO: descrizione
+    '''
+
+    n = len(adj)
+
+    nu_condition = [
+        [
+            True if a[i,j]==1 and nu[i]>nu[j] else False
+            for j in range(n)
+        ]
+        for i in range(n)
+    ]
+
+    arrows = np.array((n,n), dtype=np.uint8)
+    arrows[nu_condition] = 1
+
+    a = [
+        (
+            sum(row),
+            [
+                j
+                for j, el in enumerate(row)
+                if el==1
+            ]
+        )
+        for row in arrows
+    ]
+
+    return a
+
+def listing(a, labels, k=4, c=set()):
+    if k==2:
+        # TODO: implementare il caso base
+        pass
+    else:
+        for node, t in enumerate(a):  # for each node in the current DAG
+            # recall, 't' is a tuple containing (degree_of_node, [adjacency list])
+            # creating the new DAG of neighbours of 'node'
+            degree = t[0]
+            neighbours = t[1]
+            # First, compute the new label (i.e. the new DAG)
+            for i in range(degree):
+                n = neighbours[i]
+                if labels[n]==k:
+                    labels[n] = k-1
+            # To identify the nodes \in the new DAG, swap them in the first part
+
+            if node[0]>0:
+                labels[node] = k-1
+            listing(a, labels, k=k-1, c=c)
 
 def counting_quadrangles(adj):
     '''
@@ -164,81 +260,41 @@ def counting_quadrangles(adj):
 
     return quadrangles_list
 
-def k_bron_kerbosch(a, vertices_labels, r, p, x, cliques_list=[], k=4):
+def counting_cliques(adj, k=4):
     '''
-        py:funcion:: k_bron_kerbosch(a, vertices_labels, r, p, x, cliques_list=set(), k=4)
+        py:funcion:: counting_cliques(adj, k=4))
 
-        This function takes in the matrix 'a' and the 'vertices_labels' list obtained
-        in the preprocessing phase (see sort_by_degree function), and returns a
-        list of k-sized cliques inside the graph.
-        This method uses an adaptation of the Bron-Kerbosch algorithm, that instead of
-        searching for MAXIMAL cliques inside our graph, it searches for cliques of
-        size k. This algorithm runs in O(nk), and it is efficient as long as
-        k = 0(log(n)). This algorithm is recursive. Pseudocode:
-
-        k_BronKerbosch(R, P, X, k):
-            if |R| = k:
-                report R as a k-clique
-            else
-                choose a pivot u in P ⋃ X
-                for each vertex v in P-N(u):
-                    BronKerbosch1(R ⋃ {v}, P ⋂ N(v), X ⋂ N(v))
-                    P := P - {v}
-                    X := X ⋃ {v}
+        # TODO: descrizione
 
         The returned list will look like this:
 
         [(v_1,v_2,...,v_k), ...]
 
-        # TODO: fare la descrizione delle variabili e il loro ruolo
-        :param a: numpy NxN+1 matrix, i.e. the new sorted_by_degree adj matrix
-        :param vertices_labels: list of size N, i.e. the map between old and new indexes.
-        :param k: positive integer, i.e. the size of the clique we're investigating
-        :return: a list of tuples, representing the quadrangle in the graph.
+        :param adj: numpy NxN matrix, i.e. the adjacency matrix
+        :param k: positive integer, i.e. the size of the cliques searched
+
+        :return: a list of tuples, representing the cliques in the graph.
     '''
+    # TODO: implementare metodo del paper
+    #n = len(adj)
+    #ordered_vertices = nu(adj)
+    #a = dag(adj, ordered_vertices)
 
-    # If the length of the clique-set is k, we've found the k-sized clique
-    # we've been looking for.
-    if len(r)==k:
-        return [r]  # We return it as a list, so that we can merge it later
+    #labels = np.full(n, k, dtype=np.uint8)
 
-    if len(p)==0:
-        return [r]
+    #listing(a, labels, k=k)  # TODO: ovvero questo
 
-    # Next, we want to implement:
-    # "choose a pivot u in P ⋃ X"
-    x_U_p = list(x|p)  # This is the union between p and x.
-    if len(x_U_p)==0:
-        return []
-
-    # Pivoting phase.
-    # We want to find the vertex which has the highest degree among the xUp set
-    u_min = np.argmin(vertices_labels[x_U_p])
-    u = x_U_p[u_min]  # Vertex u s.t. degree is maximum in the set P⋃X
-
-    # Then, we extract every neighbour of u. We want it to be a set so that
-    # we can do the p-N(u) described in the algorithm.
-    neighbours_u = set([
-    	i
-    	for i, el in enumerate(a[vertices_labels[u],1:])
-    	if el==1
-    ])
-
-    for v in p-neighbours_u:
-        # Recursive step of the algorithm
-        cliques_list += k_bron_kerbosch(
-            a,
-            vertices_labels,
-            r|{v},
-            p&neighbours_u,
-            x&neighbours_u,
-            cliques_list=cliques_list,
-            k=k
+    G = nx.from_numpy_matrix(adj)
+    k_cliques = [
+        k_clique
+        for k_clique in itertools.takewhile(
+            lambda x: len(x)<=k,
+            nx.enumerate_all_cliques(G)
         )
-        p.remove(v)
-        x.add(u)
+        if len(k_clique)==k
+    ]
 
-    return cliques_list
+    return k_cliques
 
 def counting_triangles(adj):
     '''
@@ -319,19 +375,20 @@ def clique(adj, k=4):
         else:
             raise ValueError("The size given is too small. We advise 4<=k<=7")
 
+    # TODO: call the k-clique counter
+    cliques_list = counting_cliques(adj, k=k)
+
     for c in cliques_list:
         # c is a set containing a clique of k elements.
         # Therefore, every possible edge of the weighted graph receives a +1
         c_list = list(c)  # Because we want to index it in order to fully enumerate
         for index, i in enumerate(c_list):
-            for j in c_list[index+1:]:
+            for j in c_list[index+1:]:  # we obviously don't accept self-loops
                 w_mat[i,j] += 1
 
                 # Because of symmetry
                 w_mat[j,i] += 1
 
-    print(w_mat)
-    input()
     return w_mat
 
 def tailed_triangle(adj):
@@ -722,7 +779,6 @@ def awppr(w, u, alpha, epsilon):
     r = np.zeros(n, dtype=np.float64)
     r[u] = 1
 
-    # np.set_printoptions(threshold=sys.maxsize)
     d_w = np.sum(w, axis=0)
 
     v = approx_check(r, d_w, epsilon)

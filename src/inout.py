@@ -22,6 +22,7 @@ def parse_command_line():
     parameters = {
         'dataset': 'HINT+HI2012',
         'motif': 'triangle',
+        'k': 4,
         'method': 'HOTNET2',
         'soft': False,
         'delta': 0.000496,  # this default value comes from HotNet2: it doesn't necessary makes sense
@@ -35,6 +36,7 @@ def parse_command_line():
     # Motif searched
     parser.add_argument('-m', type=str, help='Motif type')
     # Diffusion process algorithm selection
+    parser.add_argument('-k', type=int, help='Clique size, when selected')
     parser.add_argument('-f', type=str, help='Method to compute f')
     # Delta parameter selection
     parser.add_argument('-d', type=float, help='Cut-off value for edges in the graph H')
@@ -51,6 +53,9 @@ def parse_command_line():
     if args.m:
         parameters['motif'] = args.m
 
+    if args.k:
+        parameters['k'] = args.k
+
     if args.f:
         parameters['method'] = args.f
 
@@ -59,7 +64,7 @@ def parse_command_line():
 
     return parameters
 
-def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False):
+def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False, k=4):
     """
     py:function:: load_input(dataset_name='HINT+HI2012')
 
@@ -78,7 +83,11 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False):
     input_path = project_path+'in/'+dataset_name+'/'
 
     if motif_name != None:
-        motif_path = input_path + 'temp/'+motif_name
+        if motif_name == 'clique':
+            motif_path = input_path + 'temp/'+str(k)+motif_name
+        else:
+            motif_path = input_path + 'temp/'+motif_name
+
         if soft:
             motif_path += '_s'
         motif_path += '/'
@@ -145,7 +154,7 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False):
 
     return inputs
 
-def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='triangle', soft=False):
+def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='triangle', soft=False, k=4):
     # For compatibility issues, we're extracting the absolute path of the project.
     abs_path = os.path.dirname(os.path.abspath(__file__))
     project_path = abs_path[:-3]  # This will work just bc of the name of this dir
@@ -156,10 +165,15 @@ def write_transition_matrix(inputs, w, dataset_name='HINT+HI2012', motif_name='t
     except FileExistsError:
         pass
 
-    temp_path += motif_name
+    if motif_name=='clique':
+        temp_path += str(k)+motif_name
+    else:
+        temp_path += motif_name
+
     if soft:
         temp_path += '_s'
     temp_path += '/'
+
     try:
         os.mkdir(temp_path)
     except FileExistsError:
@@ -219,7 +233,11 @@ def write_strong_ccs(s_cc_list, v_labels, parameters):
     except FileExistsError:
         pass
 
-    filename = parameters['motif']+'_delta='+str(parameters['delta'])+'.txt'
+    if parameters['motif'] == 'clique':
+        filename = str(parameters['k'])+parameters['motif']+'_delta='+str(parameters['delta'])+'.txt'
+    else:
+        filename = parameters['motif']+'_delta='+str(parameters['delta'])+'.txt'
+
     with open(out_path+filename, 'w') as outfp:
         m = len(s_cc_list)
         outfp.write("Found "+str(m)+" strongly connected components.\n")
@@ -232,45 +250,3 @@ def write_strong_ccs(s_cc_list, v_labels, parameters):
             for el in set_list:
                 outfp.write(' '+str(v_labels[el]))
             outfp.write(' }\n')
-
-def read_from_temp(dataset_name='HINT+HI2012', motif_name='triangle'):
-    """
-    py:function:: read_from_temp(dataset_name='HINT+HI2012', motif='triangle')
-
-    Parsing the input from the /in/dataset_name/temp/ folder, assuming that we
-    can find the w matrix stored, there. The format should be linked to whatever
-    the 'write_to_temp' wrote. This function will extract the W matrix corresponding
-    to the motif given.
-
-    :param dataset_name: String containing the name of the dataset to be loaded.
-    :param motif: String containing the name of the motif wanted.
-
-    :return: the numpy matrix containing W.
-    """
-
-    # For compatibility issues, we're extracting the absolute path of the project.
-    abs_path = os.path.dirname(os.path.abspath(__file__))
-    project_path = abs_path[:-3]  # WARNING This will work bc of the name of this dir
-    input_path = project_path+'/in/'+dataset_name+'/'
-
-    file_name = 'vertex_labels.txt'
-    with open(input_path+file_name) as infp:
-        lines = infp.readlines()
-        n = int(lines[0])
-
-    w = np.zeros((n,n), dtype=np.uint16)
-    file_name = '/temp/'+'w_'+motif_name+'.txt'
-    with open(input_path+file_name) as infp:
-        lines = infp.readlines()
-        m = len(lines)
-        for l in lines:
-            s = l.split(",")
-            edge = s[0]
-            weight = int(s[1])
-            s = edge.split(" ")
-            i = int(s[0])
-            j = int(s[1])
-            w[i,j] = weight
-            w[j,i] = weight  # assuming undirected graphs
-
-    return w

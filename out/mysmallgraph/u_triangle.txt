@@ -1,3 +1,0 @@
-Found 2 strongly connected components.
-#1 (len: 3): { F R U }
-#2 (len: 3): { A P V }
