@@ -107,101 +107,6 @@ def sort_by_degree(adj):
     # We return it as an Numpy array; we just love Numpy
     return np.array(ordered_vertices, dtype=np.uint32)
 
-def min_degree(adj):
-    '''
-        # TODO: documentare
-    '''
-    nodes_degree = [sum(row) for row in adj]  # Computing the nodes' degrees
-    return np.argmin(np.array(nodes_degree))
-
-def sort_by_core(adj):
-    '''
-        # TODO: documentare
-    '''
-    n = len(adj)
-    a = np.copy(adj)
-
-    ordered_vertices = np.zeros(n, dtype=np.uint32)
-
-    for i, in range(n-1):
-        v = min_degree(a)  # picking the minimum-degree vertex
-        ordered_vertices[i] = v
-        # Erasing v from the graph
-        a[v,:] = 0
-        a[:,v] = 0
-
-    return np.flip(ordered_vertices, 0)
-
-def nu(adj):
-    '''
-        # TODO: commentare e descrivere questa funzione
-    '''
-
-    n = len(adj)
-    degree_ordering = sort_by_degree(adj)
-    core_ordering = sort_by_core(adj)
-
-    return np.array(
-        sorted(
-            degree_ordering.tolist(),
-            reverse=True,
-            key=lambda i:core_ordering[i]
-        )
-    )
-
-def dag(adj, nu):
-    '''
-        # TODO: descrizione
-    '''
-
-    n = len(adj)
-
-    nu_condition = [
-        [
-            True if a[i,j]==1 and nu[i]>nu[j] else False
-            for j in range(n)
-        ]
-        for i in range(n)
-    ]
-
-    arrows = np.array((n,n), dtype=np.uint8)
-    arrows[nu_condition] = 1
-
-    a = [
-        (
-            sum(row),
-            [
-                j
-                for j, el in enumerate(row)
-                if el==1
-            ]
-        )
-        for row in arrows
-    ]
-
-    return a
-
-def listing(a, labels, k=4, c=set()):
-    if k==2:
-        # TODO: implementare il caso base
-        pass
-    else:
-        for node, t in enumerate(a):  # for each node in the current DAG
-            # recall, 't' is a tuple containing (degree_of_node, [adjacency list])
-            # creating the new DAG of neighbours of 'node'
-            degree = t[0]
-            neighbours = t[1]
-            # First, compute the new label (i.e. the new DAG)
-            for i in range(degree):
-                n = neighbours[i]
-                if labels[n]==k:
-                    labels[n] = k-1
-            # To identify the nodes \in the new DAG, swap them in the first part
-
-            if node[0]>0:
-                labels[node] = k-1
-            listing(a, labels, k=k-1, c=c)
-
 def counting_quadrangles(adj):
     '''
         py:funcion:: counting_quadrangles(adj)
@@ -264,7 +169,10 @@ def counting_cliques(adj, k=4):
     '''
         py:funcion:: counting_cliques(adj, k=4))
 
-        # TODO: descrizione
+        This function simply counts every occurence of a complete subgraph of size k
+        (i.e. a clique of size k).
+        To do so, we exploit the already implemented (networkx) enumeration of
+        every possible clique in a graph.
 
         The returned list will look like this:
 
@@ -275,14 +183,6 @@ def counting_cliques(adj, k=4):
 
         :return: a list of tuples, representing the cliques in the graph.
     '''
-    # TODO: implementare metodo del paper
-    #n = len(adj)
-    #ordered_vertices = nu(adj)
-    #a = dag(adj, ordered_vertices)
-
-    #labels = np.full(n, k, dtype=np.uint8)
-
-    #listing(a, labels, k=k)  # TODO: ovvero questo
 
     G = nx.from_numpy_matrix(adj)
     k_cliques = [
@@ -348,7 +248,19 @@ def counting_triangles(adj):
 
 def clique(adj, k=4):
     '''
-        ... # TODO: descrizione
+        py:funcion:: clique(adj, k=4)
+
+        Computing the clique of size k occurences inside the graph; this
+        method exploits clique counting (see counting triangles).
+        As always, our objective is to create the new W matrix, with
+        Wij = #triangles on the edge.
+        In other words, we want to count the edges participating in occurences
+        of the motif considered (i.e. undirected clique of size k).
+
+        :param adj: numpy NxN matrix, i.e. the adjacency matrix of the graph
+        :param k: int, i.e. the size of the clique considered
+
+        :return: numpy NxN matrix, i.e. the new adj matrix representing the motif count
     '''
 
     n = len(adj)
@@ -375,7 +287,6 @@ def clique(adj, k=4):
         else:
             raise ValueError("The size given is too small. We advise 4<=k<=7")
 
-    # TODO: call the k-clique counter
     cliques_list = counting_cliques(adj, k=k)
 
     for c in cliques_list:
@@ -708,7 +619,7 @@ def filter_disconnected_components(motif_mat, inputs):
 
     # Re-write them by reference, in place, so that we don't need to return
     # the new indexes.
-    # TODO: We've de-bugged this already, but I want to be sure it works. # DEBUG: further debugging
+
     inputs['v_labels'] = np.delete(
         inputs['v_labels'],
         disconnected_vertices
@@ -827,11 +738,3 @@ def extract_strong_cc(h):
     ]
 
     return subgraphs
-
-"""
-    TODO: chiedere al professore:
-    - VA BENE LA SEGUENTE VERSIONE "SOFT"?
-        Perché ignorare _completamente_ i lati che non partecipano ai motif?
-        Perché semplicemente non lasciare peso unitario ai lati in generale,
-        aumentando invece il peso dei lati che partecipano ai motif?
-"""
