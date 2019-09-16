@@ -102,12 +102,14 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False, k=4):
         n = int(lines[0])
         k = int(lines[1])
         v_labeling = np.empty(k, dtype=object)
+        rev_labeling = {}
         for l in lines[2:]:
             s = l.split(" ")
             idx = int(s[0])
             # To extract the label is a bit tricky, but nothing to it honestly.
             name = str(s[1].split("\n")[0])  # We want to get rid of the '\n'
             v_labeling[idx] = name
+            rev_labeling[name] = idx
 
     file_name = 'adjacency_matrix.txt'
     with open(input_path+file_name) as infp:
@@ -146,6 +148,20 @@ def load_input(dataset_name='HINT+HI2012', motif_name=None, soft=False, k=4):
             heat_value = float(s[1])
             heat[v] = heat_value
 
+    file_name = 'classics.txt'
+    file_path = project_path+'in/'
+    with open(file_path+file_name) as infp:
+        classics_list = np.zeros(k, dtype=np.bool)
+        lines = infp.readlines()
+        for l in lines:
+            gene = l.split('\n')[0]
+            try:
+                classics_list[rev_labeling[gene]] = True
+            except KeyError:
+                pass
+
+    inputs['classics'] = classics_list
+    inputs['rev_labels'] = rev_labeling
     inputs['v_labels'] = v_labeling
     inputs['heat'] = heat
     inputs['adj'] = adjacency_matrix

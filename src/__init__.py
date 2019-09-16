@@ -20,7 +20,7 @@ def main():
             dataset_name=parameters['dataset'],
             motif_name=None  # i.e. load default inputs only
         )
-        # TODO: comment a little more from now on
+
         motif_function = getattr(l, parameters['motif'])
         if parameters['motif'] == 'clique':
             motif_matrix = motif_function(
@@ -73,13 +73,26 @@ def main():
     # (note. we're filtering out cc which size is == 1)
     strong_cc = l.extract_strong_cc(h)
 
-    # (6): Saving to an output file such strong components.
+    # (6): Saving to an output file such strong connected components.
     io.write_strong_ccs(
         s_cc_list=strong_cc,
         v_labels=inputs['v_labels'],
         parameters=parameters
     )
 
+    # (7): For each strong connected component, compute its TPR and FPR.
+    tpr = l.compute_tpr(
+        s_cc_list=strong_cc,
+        genes=inputs['classics']
+    )
+    fpr = l.compute_fpr(
+        s_cc_list=strong_cc,
+        genes=inputs['classics']
+    )
+
+    ks_used = l.compute_possible_ks(strong_cc)  # Possible values of the parameter k
+    print(tpr)
+    print(fpr)
 
 if __name__ == "__main__":
     main()

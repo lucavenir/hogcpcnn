@@ -1,0 +1,6 @@
+Found 5 strongly connected components.
+#1 (len: 8): { CREBBP CTNNB1 EP300 ING1 SIN3A SMAD2 SMAD4 TP53 }
+#2 (len: 3): { ARID1A SMARCA4 SMARCB1 }
+#3 (len: 3): { RAD21 SMC3 STAG2 }
+#4 (len: 3): { KDM6A MLL2 RBBP5 }
+#5 (len: 2): { ATM BRCA1 }

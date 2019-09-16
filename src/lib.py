@@ -737,4 +737,79 @@ def extract_strong_cc(h):
         if len(c)>1
     ]
 
-    return subgraphs
+    return sorted(
+        subgraphs,
+        key=lambda x:len(x),
+        reverse=True
+
+    )
+
+def compute_tpr(s_cc_list, genes):
+    '''
+        # TODO: descrizione
+    '''
+
+    tpr = [0]  # To be returned list, first rate is always zero
+    returned_genes = set()  # Output of our algorithm, for each possible k
+
+    ks = compute_possible_ks(s_cc_list)  # Possible values of the parameter k
+
+    # Positives inside our graph
+    positives = set([
+        v
+        for v,t in enumerate(genes)
+        if t  # Add this gene to the positives list if t==True.
+    ])
+    p = len(positives)
+
+    for k in ks:  # for each possible parameter k (see TPR definition)
+        i = 0
+        while i<len(s_cc_list) and len(s_cc_list[i])>=k:  # add every possible gene
+            returned_genes |= s_cc_list[i]
+            i += 1
+
+        tp = len(returned_genes&positives)
+        tpr.append(float(tp)/float(p))
+
+    return np.array(tpr, dtype=np.float64)
+
+def compute_fpr(s_cc_list, genes):
+    '''
+        # TODO: descrizione
+    '''
+
+    fpr = [0]  # To be returned list, first rate is always zero
+    returned_genes = set()  # Output of our algorithm, for each possible k
+
+    ks = compute_possible_ks(s_cc_list)  # Possible values of the parameter k
+
+    # Positives inside our graph
+    negatives = set([
+        v
+        for v,t in enumerate(genes)
+        if not t  # Add this gene to the negatives list if t==False.
+    ])
+    n = len(negatives)
+
+    for k in ks:  # for each possible parameter k (see TPR definition)
+        i = 0
+        while i<len(s_cc_list) and len(s_cc_list[i])>=k:  # add every possible gene
+            returned_genes |= s_cc_list[i]
+            i += 1
+
+        fp = len(returned_genes&negatives)
+        fpr.append(float(fp)/float(n))
+
+    return np.array(fpr, dtype=np.float64)
+
+def compute_possible_ks(s_cc_list):
+    '''
+        # TODO: descrivere
+    '''
+
+    ks = set()  # Possible values of the parameter k, to be computed (below)
+    for strong_cc in s_cc_list:
+        ks.add(len(strong_cc))
+    ks = sorted(list(ks), reverse=True)  # From 'most' to 'least' interesting
+
+    return ks
