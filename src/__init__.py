@@ -90,9 +90,11 @@ def main():
         genes=inputs['classics']
     )
 
-    ks_used = l.compute_possible_ks(strong_cc)  # Possible values of the parameter k
-    print(tpr)
-    print(fpr)
+    io.write_tprfpr(
+        tpr=tpr,
+        fpr=fpr,
+        parameters=parameters
+    )
 
 if __name__ == "__main__":
     main()

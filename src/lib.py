@@ -749,10 +749,11 @@ def compute_tpr(s_cc_list, genes):
         # TODO: descrizione
     '''
 
-    tpr = [0]  # To be returned list, first rate is always zero
+    ks = compute_possible_ks(s_cc_list)  # Possible values of the parameter k
+
+    tpr = [(ks[0]+1,0)]  # To be returned list, first rate is always zero
     returned_genes = set()  # Output of our algorithm, for each possible k
 
-    ks = compute_possible_ks(s_cc_list)  # Possible values of the parameter k
 
     # Positives inside our graph
     positives = set([
@@ -769,19 +770,19 @@ def compute_tpr(s_cc_list, genes):
             i += 1
 
         tp = len(returned_genes&positives)
-        tpr.append(float(tp)/float(p))
+        tpr.append((k, float(tp)/float(p)))
 
-    return np.array(tpr, dtype=np.float64)
+    return tpr
 
 def compute_fpr(s_cc_list, genes):
     '''
         # TODO: descrizione
     '''
 
-    fpr = [0]  # To be returned list, first rate is always zero
-    returned_genes = set()  # Output of our algorithm, for each possible k
-
     ks = compute_possible_ks(s_cc_list)  # Possible values of the parameter k
+
+    fpr = [(ks[0]+1,0)]  # To be returned list, first rate is always zero
+    returned_genes = set()  # Output of our algorithm, for each possible k
 
     # Positives inside our graph
     negatives = set([
@@ -798,9 +799,9 @@ def compute_fpr(s_cc_list, genes):
             i += 1
 
         fp = len(returned_genes&negatives)
-        fpr.append(float(fp)/float(n))
+        fpr.append((k, float(fp)/float(n)))
 
-    return np.array(fpr, dtype=np.float64)
+    return fpr
 
 def compute_possible_ks(s_cc_list):
     '''

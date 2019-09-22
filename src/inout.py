@@ -256,6 +256,16 @@ def write_strong_ccs(s_cc_list, v_labels, parameters):
 
     with open(out_path+filename, 'w') as outfp:
         m = len(s_cc_list)
+
+        outfp.write("Parameters:\n")
+        outfp.write('Motif: ')
+        if parameters['motif'] == 'clique':
+            outfp.write(str(parameters['k'])+parameters['motif'])
+        else:
+            outfp.write(str(parameters['motif']))
+        outfp.write('\n')
+        outfp.write('delta: '+str(parameters['delta'])+'\n')
+
         outfp.write("Found "+str(m)+" strongly connected components.\n")
         for i,set in enumerate(s_cc_list):
             outfp.write('#'+str(i+1)+' (len: '+ str(len(set)) +'): {')
@@ -266,3 +276,33 @@ def write_strong_ccs(s_cc_list, v_labels, parameters):
             for el in set_list:
                 outfp.write(' '+str(v_labels[el]))
             outfp.write(' }\n')
+
+def write_tprfpr(tpr, fpr, parameters):
+    # For compatibility issues, we're extracting the absolute path of the project.
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    project_path = abs_path[:-3]  # WARNING: This will work just bc of the name of this dir ('src')
+
+    out_path = project_path+'/out/'+parameters['dataset']+'/'
+    try:
+        os.mkdir(out_path)
+    except FileExistsError:
+        pass
+
+    if parameters['soft']:
+        motif_name += '_s'
+
+    out_path += 'delta='+str(parameters['delta'])+'/'
+    try:
+        os.mkdir(out_path)
+    except FileExistsError:
+        pass
+
+    if parameters['motif'] == 'clique':
+        filename = "tprfpr_"+str(parameters['k'])+parameters['motif']+'_delta='+str(parameters['delta'])+'.txt'
+    else:
+        filename = "tprfpr_"+parameters['motif']+'_delta='+str(parameters['delta'])+'.txt'
+
+    with open(out_path+filename, 'w') as outfp:
+        m = len(tpr)
+        for i in reversed(range(m)):
+            outfp.write('k='+str(tpr[i][0])+': '+str(tpr[i][1])+','+str(fpr[i][1])+'\n')
