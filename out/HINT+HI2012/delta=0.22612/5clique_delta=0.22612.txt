@@ -1,0 +1,11 @@
+Parameters:
+Motif: 5clique
+delta: 0.22612
+Found 7 strongly connected components.
+#1 (len: 8): { CASP8 CREBBP CTNNB1 EP300 MLL RB1 SMAD2 SMAD4 }
+#2 (len: 4): { ARID1A PBRM1 SMARCA4 SMARCB1 }
+#3 (len: 4): { EGFR ERBB2 PTPN11 RASA1 }
+#4 (len: 3): { KDM6A MLL2 MLL3 }
+#5 (len: 2): { ATM BRCA1 }
+#6 (len: 2): { GPS2 NCOR1 }
+#7 (len: 2): { RAD21 STAG2 }
