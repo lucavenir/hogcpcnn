@@ -1,5 +1,0 @@
-Found 4 strongly connected components.
-#1 (len: 4): { EGFR ERBB2 PIK3R1 PLCG2 }
-#2 (len: 3): { CREBBP CTNNB1 EP300 }
-#3 (len: 3): { RAD21 SMC3 STAG2 }
-#4 (len: 3): { KDM6A MLL2 RBBP5 }
