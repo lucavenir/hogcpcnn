@@ -63,7 +63,7 @@ def main():
     h = l.diffusion_matrix(
         w=inputs['w'],
         heat=inputs['heat'],
-        alpha=0.6,  # It doesn't make sense to modify this parameter (for now)
+        alpha=parameters['alpha'],
         epsilon=0.001,  # This is the (fixed) approximation for the APPR algorithm
         delta=parameters['delta'],
         method=parameters['method']
@@ -90,6 +90,7 @@ def main():
         genes=inputs['classics']
     )
 
+    # (8): Write them down for further exploration
     io.write_tprfpr(
         tpr=tpr,
         fpr=fpr,

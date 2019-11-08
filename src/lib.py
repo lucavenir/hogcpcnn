@@ -706,6 +706,9 @@ def awppr(w, u, alpha, epsilon):
     return p_tilde
 
 def diffusion_matrix(w, heat, alpha, epsilon, delta, method='AWPPR'):
+    '''
+        # TODO: descrizione
+    '''
     n = len(w)
 
     # Creating F, first.
@@ -729,6 +732,9 @@ def diffusion_matrix(w, heat, alpha, epsilon, delta, method='AWPPR'):
     return h
 
 def extract_strong_cc(h):
+    '''
+        # TODO: descrizione
+    '''
     H = nx.from_numpy_matrix(h, create_using=nx.DiGraph())
 
     subgraphs = [
@@ -741,7 +747,6 @@ def extract_strong_cc(h):
         subgraphs,
         key=lambda x:len(x),
         reverse=True
-
     )
 
 def compute_tpr(s_cc_list, genes):

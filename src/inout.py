@@ -26,6 +26,7 @@ def parse_command_line():
         'method': 'HOTNET2',
         'soft': False,
         'delta': 0.000496,  # this default value comes from HotNet2: it doesn't necessary makes sense
+        'alpha': 0.5,  # arbitrary default value
         'timestamp': timestamp  # for now, this will be ignored
     }
 
@@ -42,10 +43,15 @@ def parse_command_line():
     parser.add_argument('-d', type=float, help='Cut-off value for edges in the graph H')
     # Soft version of the problem?
     parser.add_argument('-s', action='store_true', help='Type -s to enable the soft version')
+    # Alpha parameter selection
+    parser.add_argument('-a', type=float, help='(1-a) is the restart probability')
     args = parser.parse_args()
 
     if args.d:
         parameters['delta'] = float(args.d)
+
+    if args.a:
+        parameters['alpha'] = float(args.a)
 
     if args.db:
         parameters['dataset'] = args.db
@@ -241,7 +247,9 @@ def write_strong_ccs(s_cc_list, v_labels, parameters):
         pass
 
     if parameters['soft']:
-        motif_name += '_s'
+        motif_name = 's_'+parameters['motif']
+    else:
+        motif_name = parameters['motif']
 
     out_path += 'delta='+str(parameters['delta'])+'/'
     try:
@@ -249,10 +257,22 @@ def write_strong_ccs(s_cc_list, v_labels, parameters):
     except FileExistsError:
         pass
 
+    out_path += 'alpha='+str(parameters['alpha'])+'/'
+    try:
+        os.mkdir(out_path)
+    except FileExistsError:
+        pass
+
     if parameters['motif'] == 'clique':
-        filename = str(parameters['k'])+parameters['motif']+'_delta='+str(parameters['delta'])+'.txt'
+        filename = str(parameters['k'])+motif_name
+        filename += '_delta='+str(parameters['delta'])
+        filename += '_alpha='+str(parameters['alpha'])
+        filename += '.txt'
     else:
-        filename = parameters['motif']+'_delta='+str(parameters['delta'])+'.txt'
+        filename = motif_name
+        filename += '_delta='+str(parameters['delta'])
+        filename += '_alpha='+str(parameters['alpha'])
+        filename += '.txt'
 
     with open(out_path+filename, 'w') as outfp:
         m = len(s_cc_list)
@@ -263,9 +283,12 @@ def write_strong_ccs(s_cc_list, v_labels, parameters):
             outfp.write(str(parameters['k'])+parameters['motif'])
         else:
             outfp.write(str(parameters['motif']))
+        if parameters['soft']:
+            outfp.write('SOFT VERSIION\n')
         outfp.write('\n')
         outfp.write('delta: '+str(parameters['delta'])+'\n')
-
+        outfp.write('alpha: '+str(parameters['alpha'])+'\n')
+        outfp.write('\n')
         outfp.write("Found "+str(m)+" strongly connected components.\n")
         for i,set in enumerate(s_cc_list):
             outfp.write('#'+str(i+1)+' (len: '+ str(len(set)) +'): {')
@@ -289,7 +312,9 @@ def write_tprfpr(tpr, fpr, parameters):
         pass
 
     if parameters['soft']:
-        motif_name += '_s'
+        motif_name = 's_'+parameters['motif']
+    else:
+        motif_name = parameters['motif']
 
     out_path += 'delta='+str(parameters['delta'])+'/'
     try:
@@ -297,10 +322,24 @@ def write_tprfpr(tpr, fpr, parameters):
     except FileExistsError:
         pass
 
+    out_path += 'alpha='+str(parameters['alpha'])+'/'
+    try:
+        os.mkdir(out_path)
+    except FileExistsError:
+        pass
+
     if parameters['motif'] == 'clique':
-        filename = "tprfpr_"+str(parameters['k'])+parameters['motif']+'_delta='+str(parameters['delta'])+'.txt'
+        filename = "tprfpr_"
+        filename += str(parameters['k'])+motif_name
+        filename += '_delta='+str(parameters['delta'])
+        filename += '_alpha='+str(parameters['alpha'])
+        filename += '.txt'
     else:
-        filename = "tprfpr_"+parameters['motif']+'_delta='+str(parameters['delta'])+'.txt'
+        filename = "tprfpr_"
+        filename += motif_name
+        filename += '_delta='+str(parameters['delta'])
+        filename += '_alpha='+str(parameters['alpha'])
+        filename += '.txt'
 
     with open(out_path+filename, 'w') as outfp:
         m = len(tpr)

@@ -16,6 +16,12 @@
 
 import matplotlib.pyplot as plt
 import os
+import networkx as nx
+import sys
+# insert at 1, 0 is the script path (or '' in REPL)
+sys.path.append('/home/venir/Documents/Thesis/hogcpcnn/src')
+import inout as io
+import lib as l
 
 # The INPUT files of this script should be the following:
 input_folder = '../out/'
@@ -110,5 +116,18 @@ def plotting():
 
         plt.show()
 
+def graphplot():
+    inputs = io.load_input(
+        dataset_name=database,
+        motif_name='clique',
+        k=5
+    )
+    adj = inputs['adj']
+    G = nx.from_numpy_matrix(adj)
+    print(adj)
+    input()
+    nx.draw(G)
+
 if __name__ == "__main__":
-    plotting()
+    graphplot()
+    # plotting()
